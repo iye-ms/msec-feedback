@@ -5,6 +5,9 @@ import { TopicsChart } from "@/components/Dashboard/TopicsChart";
 import { StatsCards } from "@/components/Dashboard/StatsCards";
 import { RecentFeedback } from "@/components/Dashboard/RecentFeedback";
 import { EmergingIssues } from "@/components/Dashboard/EmergingIssues";
+import { TopicsView } from "@/components/Topics/TopicsView";
+import { RawFeedView } from "@/components/Feed/RawFeedView";
+import { ReportsView } from "@/components/Reports/ReportsView";
 
 const Index = () => {
   return (
@@ -71,43 +74,28 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="topics">
-            <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
-              <Tags className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Topics View</h3>
-              <p className="text-muted-foreground">
-                Detailed topic analysis and filtering coming soon
-              </p>
-            </div>
+            <TopicsView />
           </TabsContent>
 
           <TabsContent value="trends">
-            <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
-              <TrendingUp className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Sentiment Trends</h3>
-              <p className="text-muted-foreground">
-                Historical trend analysis coming soon
-              </p>
+            <div className="space-y-6">
+              <SentimentChart />
+              <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
+                <TrendingUp className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Extended Historical Analysis</h3>
+                <p className="text-muted-foreground">
+                  Multi-month trend comparison coming soon
+                </p>
+              </div>
             </div>
           </TabsContent>
 
           <TabsContent value="feed">
-            <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
-              <List className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Raw Feed</h3>
-              <p className="text-muted-foreground">
-                Complete feedback table with advanced filtering coming soon
-              </p>
-            </div>
+            <RawFeedView />
           </TabsContent>
 
           <TabsContent value="reports">
-            <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
-              <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Weekly Reports</h3>
-              <p className="text-muted-foreground">
-                Automated weekly summaries and exports coming soon
-              </p>
-            </div>
+            <ReportsView />
           </TabsContent>
         </Tabs>
       </main>
