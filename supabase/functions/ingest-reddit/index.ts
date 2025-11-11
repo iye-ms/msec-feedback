@@ -99,11 +99,12 @@ for (const post of posts) {
       throw classificationError;
     }
 
-    // Insert into database with required reddit_id
+    // Insert into database with required fields
     const { error: insertError } = await supabase.from("feedback_entries").insert({
       reddit_id: post.id,
       source: "Reddit",
       author: `u/${post.author}`,
+      title: post.title,
       timestamp: new Date(post.created_utc * 1000).toISOString(),
       content,
       url: postUrl,
@@ -111,6 +112,7 @@ for (const post of posts) {
       topic: classification?.topic ?? "General",
       feedback_type: classification?.feedback_type ?? "question",
       engagement_score: post.score,
+      score: post.score,
     });
 
     if (insertError) {
