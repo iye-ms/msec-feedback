@@ -55,44 +55,44 @@ export const DataIngestionPanel = () => {
 
   return (
     <Card className="shadow-sm border-primary/20">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <RefreshCw className="h-5 w-5" />
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <RefreshCw className="h-4 w-4" />
           Manual Data Operations
         </CardTitle>
-        <CardDescription>
-          Manually trigger data ingestion and report generation
+        <CardDescription className="text-xs">
+          Trigger data ingestion and reports
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-col gap-2">
+      <CardContent className="space-y-3">
+        <div className="flex flex-col gap-1.5">
           <Button
             onClick={handleIngestReddit}
             disabled={isIngesting}
             className="w-full"
-            size="lg"
+            size="sm"
           >
-            <Download className="h-4 w-4 mr-2" />
-            {isIngesting ? "Ingesting..." : "Ingest Reddit Posts Now"}
+            <Download className="h-3 w-3 mr-2" />
+            {isIngesting ? "Ingesting..." : "Ingest Reddit Posts"}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Fetches latest posts from r/Intune and classifies them with AI
+            Fetch r/Intune posts
           </p>
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           <Button
             onClick={handleGenerateReport}
             disabled={isGeneratingReport}
             variant="outline"
             className="w-full"
-            size="lg"
+            size="sm"
           >
-            <FileText className="h-4 w-4 mr-2" />
-            {isGeneratingReport ? "Generating..." : "Generate Weekly Report"}
+            <FileText className="h-3 w-3 mr-2" />
+            {isGeneratingReport ? "Generating..." : "Generate Report"}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Creates an AI-generated summary of the past 7 days
+            AI summary of past 7 days
           </p>
         </div>
       </CardContent>
