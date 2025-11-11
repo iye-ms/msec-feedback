@@ -19,10 +19,14 @@ export type Database = {
           author: string
           content: string | null
           created_at: string
+          engagement_score: number
+          feedback_type: string | null
           id: string
           reddit_id: string
           score: number
           sentiment: string | null
+          source: string
+          timestamp: string
           title: string
           topic: string | null
           type: string | null
@@ -32,10 +36,14 @@ export type Database = {
           author: string
           content?: string | null
           created_at?: string
+          engagement_score?: number
+          feedback_type?: string | null
           id?: string
           reddit_id: string
           score?: number
           sentiment?: string | null
+          source?: string
+          timestamp?: string
           title: string
           topic?: string | null
           type?: string | null
@@ -45,10 +53,14 @@ export type Database = {
           author?: string
           content?: string | null
           created_at?: string
+          engagement_score?: number
+          feedback_type?: string | null
           id?: string
           reddit_id?: string
           score?: number
           sentiment?: string | null
+          source?: string
+          timestamp?: string
           title?: string
           topic?: string | null
           type?: string | null
