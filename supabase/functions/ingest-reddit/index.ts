@@ -14,6 +14,7 @@ interface RedditPost {
   created_utc: number;
   url: string;
   score: number;
+  permalink: string;
 }
 
 serve(async (req) => {
@@ -71,62 +72,58 @@ serve(async (req) => {
     let newPosts = 0;
     let errors = 0;
 
-    // Process each post
-    for (const post of posts) {
-      try {
-        const content = post.selftext || post.title;
-        const postUrl = `https://reddit.com${post.url}`;
+// Process each post
+for (const post of posts) {
+  try {
+    const content = (post.selftext && post.selftext.trim().length > 0) ? post.selftext : post.title;
+    const postUrl = `https://www.reddit.com${post.permalink}`;
 
-        // Check if post already exists
-        const { data: existing } = await supabase
-          .from("feedback_entries")
-          .select("id")
-          .eq("url", postUrl)
-          .single();
+    // Check if post already exists by reddit_id
+    const { data: existing } = await supabase
+      .from("feedback_entries")
+      .select("id")
+      .eq("reddit_id", post.id)
+      .single();
 
-        if (existing) {
-          continue; // Skip if already processed
-        }
-
-        // Classify the feedback using AI
-        const classificationResponse = await fetch(
-          `${supabaseUrl}/functions/v1/classify-feedback`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${supabaseKey}`,
-            },
-            body: JSON.stringify({ content }),
-          }
-        );
-
-        const classification = await classificationResponse.json();
-
-        // Insert into database
-        const { error: insertError } = await supabase.from("feedback_entries").insert({
-          source: "Reddit",
-          author: `u/${post.author}`,
-          timestamp: new Date(post.created_utc * 1000).toISOString(),
-          content,
-          url: postUrl,
-          sentiment: classification.sentiment,
-          topic: classification.topic,
-          feedback_type: classification.feedback_type,
-          engagement_score: post.score,
-        });
-
-        if (insertError) {
-          console.error("Insert error:", insertError);
-          errors++;
-        } else {
-          newPosts++;
-        }
-      } catch (error) {
-        console.error("Error processing post:", error);
-        errors++;
-      }
+    if (existing) {
+      continue; // Skip if already processed
     }
+
+    // Classify the feedback using AI via Lovable AI gateway
+    const { data: classification, error: classificationError } = await supabase.functions.invoke(
+      "classify-feedback",
+      { body: { content } }
+    );
+
+    if (classificationError) {
+      throw classificationError;
+    }
+
+    // Insert into database with required reddit_id
+    const { error: insertError } = await supabase.from("feedback_entries").insert({
+      reddit_id: post.id,
+      source: "Reddit",
+      author: `u/${post.author}`,
+      timestamp: new Date(post.created_utc * 1000).toISOString(),
+      content,
+      url: postUrl,
+      sentiment: classification?.sentiment ?? "neutral",
+      topic: classification?.topic ?? "General",
+      feedback_type: classification?.feedback_type ?? "question",
+      engagement_score: post.score,
+    });
+
+    if (insertError) {
+      console.error("Insert error:", insertError);
+      errors++;
+    } else {
+      newPosts++;
+    }
+  } catch (error) {
+    console.error("Error processing post:", error);
+    errors++;
+  }
+}
 
     return new Response(
       JSON.stringify({
