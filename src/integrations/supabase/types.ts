@@ -14,7 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      feedback_entries: {
+        Row: {
+          author: string
+          content: string | null
+          created_at: string
+          id: string
+          reddit_id: string
+          score: number
+          sentiment: string | null
+          title: string
+          topic: string | null
+          type: string | null
+          url: string
+        }
+        Insert: {
+          author: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          reddit_id: string
+          score?: number
+          sentiment?: string | null
+          title: string
+          topic?: string | null
+          type?: string | null
+          url: string
+        }
+        Update: {
+          author?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          reddit_id?: string
+          score?: number
+          sentiment?: string | null
+          title?: string
+          topic?: string | null
+          type?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
+      weekly_reports: {
+        Row: {
+          created_at: string
+          emerging_issues: Json
+          id: string
+          report_date: string
+          sentiment_distribution: Json
+          summary: string
+          top_topics: Json
+          total_feedback: number
+        }
+        Insert: {
+          created_at?: string
+          emerging_issues?: Json
+          id?: string
+          report_date: string
+          sentiment_distribution?: Json
+          summary: string
+          top_topics?: Json
+          total_feedback?: number
+        }
+        Update: {
+          created_at?: string
+          emerging_issues?: Json
+          id?: string
+          report_date?: string
+          sentiment_distribution?: Json
+          summary?: string
+          top_topics?: Json
+          total_feedback?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
