@@ -126,6 +126,7 @@ Use professional business language. Be specific and data-driven. Highlight urgen
     const { data: reportData, error: insertError } = await supabase
       .from("weekly_reports")
       .insert({
+        report_date: weekEnd,
         week_start: weekStart,
         week_end: weekEnd,
         total_feedback: totalFeedback,
