@@ -10,8 +10,8 @@ export const SetupBanner = () => {
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>Supabase Not Configured</AlertTitle>
       <AlertDescription>
-        Please add your Supabase credentials to the environment variables to enable data functionality.
-        See SETUP.md for instructions.
+        Please add your Supabase credentials in <code className="bg-muted px-1 py-0.5 rounded">src/lib/supabaseConfig.ts</code> to enable data functionality.
+        See SETUP.md for complete setup instructions.
       </AlertDescription>
     </Alert>
   );

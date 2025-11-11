@@ -1,9 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
+import { supabaseConfig } from './supabaseConfig';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = supabaseConfig.url;
+const supabaseAnonKey = supabaseConfig.anonKey;
 
-export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
+export const isSupabaseConfigured = 
+  supabaseUrl !== 'YOUR_SUPABASE_URL' && 
+  supabaseAnonKey !== 'YOUR_SUPABASE_ANON_KEY' &&
+  !!(supabaseUrl && supabaseAnonKey);
 
 // Create a mock client when env vars are not configured
 const mockClient = {
