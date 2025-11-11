@@ -8,6 +8,7 @@ import { EmergingIssues } from "@/components/Dashboard/EmergingIssues";
 import { TopicsView } from "@/components/Topics/TopicsView";
 import { RawFeedView } from "@/components/Feed/RawFeedView";
 import { ReportsView } from "@/components/Reports/ReportsView";
+import { DataIngestionPanel } from "@/components/Dashboard/DataIngestionPanel";
 
 
 const Index = () => {
@@ -57,6 +58,8 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
+            <DataIngestionPanel />
+            
             <StatsCards />
             
             <div className="grid gap-6 lg:grid-cols-2">
