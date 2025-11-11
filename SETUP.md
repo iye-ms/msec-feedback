@@ -27,15 +27,14 @@ If your Lovable workspace has Cloud functions disabled, you can use an external 
 2. Create a new query and paste the contents from `supabase/migrations/20250111000000_create_feedback_tables.sql`
 3. Run the query to create the necessary tables
 
-### Step 3: Configure Environment Variables in Lovable
+### Step 3: Configure Supabase Credentials in Lovable
 
-1. Create a `.env` file in your project root (copy from `.env.example`)
-2. Add your Supabase credentials:
+1. Open the file `src/lib/supabaseConfig.ts` in your project
+2. Replace the placeholder values with your actual Supabase credentials:
+   - Replace `'YOUR_SUPABASE_URL'` with your Supabase project URL (e.g., `https://xxxxx.supabase.co`)
+   - Replace `'YOUR_SUPABASE_ANON_KEY'` with your anon/public key
 
-```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key-here
-```
+**Note**: Lovable does not use `.env` files. All configuration is done directly in code files.
 
 ### Step 4: Deploy Edge Functions to Supabase
 
