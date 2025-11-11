@@ -1,6 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatDistanceToNow } from "date-fns";
 
 interface FeedbackEntry {
   id: string;
@@ -8,63 +12,10 @@ interface FeedbackEntry {
   author: string;
   sentiment: "positive" | "neutral" | "negative";
   topic: string;
-  snippet: string;
+  content: string;
   timestamp: string;
   url: string;
 }
-
-const feedbackData: FeedbackEntry[] = [
-  {
-    id: "1",
-    source: "Reddit",
-    author: "u/ITAdmin_2024",
-    sentiment: "negative",
-    topic: "macOS Deployment",
-    snippet: "Still experiencing issues with app installation on macOS Sonoma devices...",
-    timestamp: "2 hours ago",
-    url: "#",
-  },
-  {
-    id: "2",
-    source: "LinkedIn",
-    author: "Sarah Johnson",
-    sentiment: "positive",
-    topic: "Conditional Access",
-    snippet: "The new conditional access policies are working great! Much easier to configure...",
-    timestamp: "4 hours ago",
-    url: "#",
-  },
-  {
-    id: "3",
-    source: "TechCommunity",
-    author: "Mike Anderson",
-    sentiment: "neutral",
-    topic: "Android Management",
-    snippet: "Question about best practices for Android device enrollment in enterprise...",
-    timestamp: "6 hours ago",
-    url: "#",
-  },
-  {
-    id: "4",
-    source: "Reddit",
-    author: "u/CloudAdmin",
-    sentiment: "positive",
-    topic: "Device Enrollment",
-    snippet: "The automated enrollment process saved us so much time. Great improvement!",
-    timestamp: "8 hours ago",
-    url: "#",
-  },
-  {
-    id: "5",
-    source: "LinkedIn",
-    author: "David Chen",
-    sentiment: "negative",
-    topic: "App Install Issues",
-    snippet: "Facing timeout errors during bulk app deployment to Windows devices...",
-    timestamp: "10 hours ago",
-    url: "#",
-  },
-];
 
 const sentimentColors = {
   positive: "bg-success/10 text-success border-success/20",
@@ -79,6 +30,42 @@ const sourceColors = {
 };
 
 export const RecentFeedback = () => {
+  const { data: feedbackData, isLoading } = useQuery({
+    queryKey: ['recent-feedback'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('feedback_entries')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      return data as FeedbackEntry[];
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle>Recent Feedback</CardTitle>
+          <CardDescription>Latest customer feedback from all sources</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="p-4 rounded-lg border border-border">
+                <Skeleton className="h-6 w-48 mb-2" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="shadow-sm">
       <CardHeader>
@@ -87,7 +74,7 @@ export const RecentFeedback = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {feedbackData.map((entry) => (
+          {feedbackData?.map((entry) => (
             <div
               key={entry.id}
               className="flex items-start gap-4 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
@@ -102,11 +89,13 @@ export const RecentFeedback = () => {
                   </Badge>
                   <span className="text-sm font-medium text-foreground">{entry.topic}</span>
                 </div>
-                <p className="text-sm text-muted-foreground">{entry.snippet}</p>
+                <p className="text-sm text-muted-foreground">
+                  {entry.content.substring(0, 150)}...
+                </p>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <span>{entry.author}</span>
                   <span>•</span>
-                  <span>{entry.timestamp}</span>
+                  <span>{formatDistanceToNow(new Date(entry.timestamp), { addSuffix: true })}</span>
                   <a
                     href={entry.url}
                     className="flex items-center gap-1 text-primary hover:underline"

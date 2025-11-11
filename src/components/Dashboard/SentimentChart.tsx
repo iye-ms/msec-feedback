@@ -1,17 +1,62 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-
-const data = [
-  { date: "Mon", positive: 45, neutral: 30, negative: 12 },
-  { date: "Tue", positive: 52, neutral: 28, negative: 15 },
-  { date: "Wed", positive: 38, neutral: 35, negative: 20 },
-  { date: "Thu", positive: 61, neutral: 25, negative: 10 },
-  { date: "Fri", positive: 55, neutral: 32, negative: 14 },
-  { date: "Sat", positive: 48, neutral: 30, negative: 18 },
-  { date: "Sun", positive: 50, neutral: 33, negative: 16 },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const SentimentChart = () => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['sentiment-trends'],
+    queryFn: async () => {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+
+      const { data: feedbackData, error } = await supabase
+        .from('feedback_entries')
+        .select('sentiment, timestamp')
+        .gte('timestamp', weekAgo.toISOString())
+        .order('timestamp', { ascending: true });
+
+      if (error) throw error;
+
+      // Group by day
+      const dayMap = new Map<string, { positive: number; neutral: number; negative: number }>();
+      
+      feedbackData?.forEach(entry => {
+        const date = new Date(entry.timestamp);
+        const dayKey = date.toLocaleDateString('en-US', { weekday: 'short' });
+        
+        if (!dayMap.has(dayKey)) {
+          dayMap.set(dayKey, { positive: 0, neutral: 0, negative: 0 });
+        }
+        
+        const dayCounts = dayMap.get(dayKey)!;
+        if (entry.sentiment === 'positive') dayCounts.positive++;
+        else if (entry.sentiment === 'neutral') dayCounts.neutral++;
+        else if (entry.sentiment === 'negative') dayCounts.negative++;
+      });
+
+      return Array.from(dayMap.entries()).map(([date, counts]) => ({
+        date,
+        ...counts,
+      }));
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle>Sentiment Trends</CardTitle>
+          <CardDescription>Weekly sentiment distribution across all sources</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="w-full h-[300px]" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="shadow-sm">
       <CardHeader>

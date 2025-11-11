@@ -2,13 +2,55 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Download, Calendar, TrendingUp } from "lucide-react";
-import { mockWeeklyReport, mockFeedbackData } from "@/data/mockFeedback";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 export const ReportsView = () => {
-  const report = mockWeeklyReport;
+  const { data: report, isLoading } = useQuery({
+    queryKey: ['weekly-report'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('weekly_reports')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        // If no reports exist, return null
+        if (error.code === 'PGRST116') return null;
+        throw error;
+      }
+      return data;
+    },
+  });
+
+  const { data: allFeedback } = useQuery({
+    queryKey: ['all-feedback-for-export'],
+    queryFn: async () => {
+      if (!report) return [];
+      
+      const { data, error } = await supabase
+        .from('feedback_entries')
+        .select('*')
+        .gte('timestamp', report.week_start)
+        .lte('timestamp', report.week_end)
+        .order('timestamp', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!report,
+  });
 
   const exportToCSV = () => {
+    if (!allFeedback || allFeedback.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
     const headers = [
       "ID",
       "Source",
@@ -21,7 +63,7 @@ export const ReportsView = () => {
       "Content",
     ];
 
-    const rows = mockFeedbackData.map((entry) => [
+    const rows = allFeedback.map((entry: any) => [
       entry.id,
       entry.source,
       entry.author,
@@ -39,7 +81,7 @@ export const ReportsView = () => {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `intune-feedback-${report.week_start}-to-${report.week_end}.csv`);
+    link.setAttribute("download", `intune-feedback-${report?.week_start}-to-${report?.week_end}.csv`);
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
@@ -49,9 +91,66 @@ export const ReportsView = () => {
   };
 
   const exportToPDF = () => {
-    // In production, use a library like jsPDF
     toast.info("PDF export coming soon! Use CSV export for now.");
   };
+
+  const generateNewReport = async () => {
+    try {
+      toast.info("Generating new weekly report...");
+      
+      const { data, error } = await supabase.functions.invoke('generate-weekly-report');
+      
+      if (error) throw error;
+      
+      toast.success("Report generated successfully!");
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to generate report. Please check the edge function logs.");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card className="shadow-sm">
+          <CardHeader>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-48" />
+          </CardHeader>
+        </Card>
+        <div className="grid gap-6 md:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="shadow-sm">
+              <CardHeader>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-8 w-16" />
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!report) {
+    return (
+      <Card className="shadow-sm">
+        <CardContent className="py-12 text-center space-y-4">
+          <FileText className="h-12 w-12 mx-auto text-muted-foreground" />
+          <div>
+            <h3 className="text-lg font-semibold mb-2">No Reports Yet</h3>
+            <p className="text-muted-foreground mb-4">
+              Weekly reports are generated automatically every Monday at 9 AM, or you can generate one manually.
+            </p>
+            <Button onClick={generateNewReport}>
+              Generate Report Now
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -75,6 +174,9 @@ export const ReportsView = () => {
               <Button variant="outline" size="sm" onClick={exportToPDF}>
                 <FileText className="h-4 w-4 mr-2" />
                 Export PDF
+              </Button>
+              <Button variant="outline" size="sm" onClick={generateNewReport}>
+                Generate New
               </Button>
             </div>
           </div>
@@ -102,20 +204,7 @@ export const ReportsView = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-success">
-              {report.sentiment_breakdown.positive}%
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Neutral Sentiment
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-primary">
-              {report.sentiment_breakdown.neutral}%
+              {Math.round((report.sentiment_breakdown.positive / report.total_feedback) * 100)}%
             </div>
           </CardContent>
         </Card>
@@ -128,7 +217,20 @@ export const ReportsView = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-destructive">
-              {report.sentiment_breakdown.negative}%
+              {Math.round((report.sentiment_breakdown.negative / report.total_feedback) * 100)}%
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Emerging Issues
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-warning">
+              {report.emerging_issues?.length || 0}
             </div>
           </CardContent>
         </Card>
@@ -137,14 +239,17 @@ export const ReportsView = () => {
       {/* Top Topics */}
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>Top Topics</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Top Topics
+          </CardTitle>
           <CardDescription>Most discussed areas this week</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            {report.top_topics.map((topic, index) => (
-              <Badge key={topic} variant="outline" className="text-sm py-2 px-4">
-                #{index + 1} {topic}
+            {report.top_topics.map((topic: string) => (
+              <Badge key={topic} variant="secondary" className="text-sm py-1 px-3">
+                {topic}
               </Badge>
             ))}
           </div>
@@ -152,78 +257,36 @@ export const ReportsView = () => {
       </Card>
 
       {/* Emerging Issues */}
-      <Card className="shadow-sm border-warning">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-warning" />
-            Emerging Issues
-          </CardTitle>
-          <CardDescription>Topics requiring immediate attention</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {report.emerging_issues.map((issue, index) => (
-              <div
-                key={index}
-                className="flex items-start gap-3 p-4 rounded-lg border border-warning/20 bg-warning/5"
-              >
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-warning/10 text-warning font-semibold text-sm flex-shrink-0">
-                  {index + 1}
-                </div>
-                <p className="text-sm">{issue}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {report.emerging_issues && report.emerging_issues.length > 0 && (
+        <Card className="shadow-sm border-warning">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-warning">
+              <TrendingUp className="h-5 w-5" />
+              Emerging Issues (Requires Attention)
+            </CardTitle>
+            <CardDescription>Topics with high negative sentiment</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {report.emerging_issues.map((issue: string, index: number) => (
+                <li key={index} className="text-sm p-3 rounded-lg bg-warning/10 border border-warning/20">
+                  {issue}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* AI-Generated Summary */}
+      {/* AI Summary */}
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>AI-Generated Summary</CardTitle>
-          <CardDescription>Automated analysis and insights</CardDescription>
+          <CardTitle>Executive Summary</CardTitle>
+          <CardDescription>AI-generated insights and recommendations</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="prose prose-sm max-w-none dark:prose-invert">
-            <div className="whitespace-pre-wrap text-sm leading-relaxed">{report.summary}</div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Historical Reports */}
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle>Previous Reports</CardTitle>
-          <CardDescription>Access historical weekly summaries</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {[
-              { week: "Nov 4-11, 2025", status: "current" },
-              { week: "Oct 28 - Nov 4, 2025", status: "archived" },
-              { week: "Oct 21-28, 2025", status: "archived" },
-              { week: "Oct 14-21, 2025", status: "archived" },
-            ].map((item) => (
-              <div
-                key={item.week}
-                className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">{item.week}</p>
-                    {item.status === "current" && (
-                      <Badge variant="outline" className="mt-1">
-                        Current Report
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" disabled={item.status === "archived"}>
-                  {item.status === "current" ? "Viewing" : "View Report"}
-                </Button>
-              </div>
-            ))}
+            <div dangerouslySetInnerHTML={{ __html: report.summary.replace(/\n/g, '<br/>') }} />
           </div>
         </CardContent>
       </Card>

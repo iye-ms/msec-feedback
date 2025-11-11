@@ -1,15 +1,49 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-
-const data = [
-  { topic: "macOS Deployment", mentions: 87 },
-  { topic: "Android Management", mentions: 65 },
-  { topic: "Conditional Access", mentions: 54 },
-  { topic: "App Install Issues", mentions: 48 },
-  { topic: "Device Enrollment", mentions: 42 },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const TopicsChart = () => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['top-topics'],
+    queryFn: async () => {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+
+      const { data: feedbackData, error } = await supabase
+        .from('feedback_entries')
+        .select('topic')
+        .gte('timestamp', weekAgo.toISOString());
+
+      if (error) throw error;
+
+      const topicCounts = feedbackData?.reduce((acc, entry) => {
+        acc[entry.topic] = (acc[entry.topic] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      return Object.entries(topicCounts)
+        .map(([topic, mentions]) => ({ topic, mentions }))
+        .sort((a, b) => b.mentions - a.mentions)
+        .slice(0, 5);
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle>Top Topics</CardTitle>
+          <CardDescription>Most discussed product areas this week</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="w-full h-[300px]" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="shadow-sm">
       <CardHeader>

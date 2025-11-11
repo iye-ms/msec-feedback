@@ -1,5 +1,141 @@
 # Intune Feedback Tracker - Setup Guide
 
+This guide will help you set up the Intune Feedback Tracker application with AI-powered feedback analysis.
+
+## Option 1: Using External Supabase (Recommended if Cloud is disabled)
+
+If your Lovable workspace has Cloud functions disabled, you can use an external Supabase project instead.
+
+### Prerequisites
+
+1. **Supabase account** (free at supabase.com)
+2. **Reddit API access** (free developer account at reddit.com/prefs/apps)
+3. **Lovable AI access** (contact support@lovable.dev if needed)
+
+### Step 1: Create Supabase Project
+
+1. Go to [supabase.com](https://supabase.com) and create a free account
+2. Create a new project
+3. Note down your:
+   - Project URL (e.g., `https://xxxxx.supabase.co`)
+   - Anon/Public key (found in Settings → API)
+   - Service Role key (found in Settings → API)
+
+### Step 2: Set Up Database Tables
+
+1. In your Supabase dashboard, go to SQL Editor
+2. Create a new query and paste the contents from `supabase/migrations/20250111000000_create_feedback_tables.sql`
+3. Run the query to create the necessary tables
+
+### Step 3: Configure Environment Variables in Lovable
+
+1. Create a `.env` file in your project root (copy from `.env.example`)
+2. Add your Supabase credentials:
+
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+### Step 4: Deploy Edge Functions to Supabase
+
+1. Install Supabase CLI:
+```bash
+npm install -g supabase
+```
+
+2. Login to Supabase:
+```bash
+supabase login
+```
+
+3. Link your project:
+```bash
+supabase link --project-ref your-project-ref
+```
+
+4. Deploy the edge functions:
+```bash
+supabase functions deploy classify-feedback
+supabase functions deploy ingest-reddit
+supabase functions deploy generate-weekly-report
+```
+
+### Step 5: Configure Secrets in Supabase
+
+1. Go to your Supabase dashboard → Edge Functions → Manage
+2. Click on "Edge Function Configuration"
+3. Add the following secrets:
+
+- **LOVABLE_API_KEY**: Your Lovable AI API key (contact support@lovable.dev)
+- **REDDIT_CLIENT_ID**: From reddit.com/prefs/apps
+- **REDDIT_CLIENT_SECRET**: From reddit.com/prefs/apps
+- **SUPABASE_URL**: Your Supabase project URL
+- **SUPABASE_SERVICE_ROLE_KEY**: Your service role key
+
+Or use the CLI:
+```bash
+supabase secrets set LOVABLE_API_KEY=your-key-here
+supabase secrets set REDDIT_CLIENT_ID=your-reddit-client-id
+supabase secrets set REDDIT_CLIENT_SECRET=your-reddit-secret
+```
+
+### Step 6: Set Up Scheduled Jobs
+
+In Supabase, go to Database → Cron Jobs and create:
+
+**Enable pg_cron extension** (if not already enabled):
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+```
+
+**Reddit Ingestion (every 6 hours)**:
+```sql
+SELECT cron.schedule(
+  'ingest-reddit-every-6-hours',
+  '0 */6 * * *',
+  $$
+  SELECT net.http_post(
+    url:='https://your-project.supabase.co/functions/v1/ingest-reddit',
+    headers:='{"Content-Type": "application/json", "Authorization": "Bearer YOUR_SERVICE_ROLE_KEY"}'::jsonb
+  ) AS request_id;
+  $$
+);
+```
+
+**Weekly Report (Mondays at 9 AM)**:
+```sql
+SELECT cron.schedule(
+  'generate-weekly-report',
+  '0 9 * * 1',
+  $$
+  SELECT net.http_post(
+    url:='https://your-project.supabase.co/functions/v1/generate-weekly-report',
+    headers:='{"Content-Type": "application/json", "Authorization": "Bearer YOUR_SERVICE_ROLE_KEY"}'::jsonb
+  ) AS request_id;
+  $$
+);
+```
+
+### Step 7: Test the Integration
+
+Run the ingestion manually:
+```bash
+curl -X POST https://your-project.supabase.co/functions/v1/ingest-reddit \
+  -H "Authorization: Bearer YOUR_SERVICE_ROLE_KEY" \
+  -H "Content-Type: application/json"
+```
+
+### Step 8: Deploy Your Lovable App
+
+1. Click "Publish" in Lovable to deploy your frontend
+2. The app will now connect to your external Supabase backend
+3. Verify data flows from Reddit → Supabase → Dashboard
+
+---
+
+## Option 2: Using Lovable Cloud (If you have Cloud enabled)
+
 ## Overview
 
 This application tracks and analyzes customer feedback about Microsoft Intune from multiple sources using AI-powered classification and automated data ingestion.

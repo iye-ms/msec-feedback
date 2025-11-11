@@ -18,8 +18,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ExternalLink, Calendar, Filter } from "lucide-react";
-import { mockFeedbackData } from "@/data/mockFeedback";
+import { Search, ExternalLink, Filter } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatDistanceToNow } from "date-fns";
 import { FeedbackEntry, FeedbackSource, Sentiment, FeedbackType } from "@/types/feedback";
 
 export const RawFeedView = () => {
@@ -30,38 +33,41 @@ export const RawFeedView = () => {
   const [sortBy, setSortBy] = useState<"timestamp" | "engagement">("timestamp");
   const [selectedEntry, setSelectedEntry] = useState<FeedbackEntry | null>(null);
 
-  const filteredAndSortedData = useMemo(() => {
-    let filtered = mockFeedbackData;
+  const { data: feedbackData, isLoading } = useQuery({
+    queryKey: ['raw-feedback', sourceFilter, sentimentFilter, typeFilter, sortBy],
+    queryFn: async () => {
+      let query = supabase.from('feedback_entries').select('*');
 
-    // Apply search
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (entry) =>
-          entry.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          entry.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          entry.topic.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Apply filters
-    if (sourceFilter !== "all") {
-      filtered = filtered.filter((entry) => entry.source === sourceFilter);
-    }
-    if (sentimentFilter !== "all") {
-      filtered = filtered.filter((entry) => entry.sentiment === sentimentFilter);
-    }
-    if (typeFilter !== "all") {
-      filtered = filtered.filter((entry) => entry.feedback_type === typeFilter);
-    }
-
-    // Sort
-    return filtered.sort((a, b) => {
-      if (sortBy === "timestamp") {
-        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      if (sourceFilter !== 'all') {
+        query = query.eq('source', sourceFilter);
       }
-      return b.engagement_score - a.engagement_score;
-    });
-  }, [searchQuery, sourceFilter, sentimentFilter, typeFilter, sortBy]);
+      if (sentimentFilter !== 'all') {
+        query = query.eq('sentiment', sentimentFilter);
+      }
+      if (typeFilter !== 'all') {
+        query = query.eq('feedback_type', typeFilter);
+      }
+
+      query = query.order(
+        sortBy === 'timestamp' ? 'timestamp' : 'engagement_score',
+        { ascending: false }
+      );
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as FeedbackEntry[];
+    },
+  });
+
+  const filteredData = useMemo(() => {
+    if (!searchQuery || !feedbackData) return feedbackData || [];
+    return feedbackData.filter(
+      (entry) =>
+        entry.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        entry.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        entry.topic.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery, feedbackData]);
 
   const sentimentColors = {
     positive: "bg-success/10 text-success border-success/20",
@@ -76,17 +82,7 @@ export const RawFeedView = () => {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-
-    if (diffHours < 1) return "Just now";
-    if (diffHours < 24) return `${diffHours} hours ago`;
-    const diffDays = Math.floor(diffHours / 24);
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays} days ago`;
-    return date.toLocaleDateString();
+    return formatDistanceToNow(new Date(dateString), { addSuffix: true });
   };
 
   return (
@@ -98,6 +94,7 @@ export const RawFeedView = () => {
             <Filter className="h-5 w-5" />
             Filters & Search
           </CardTitle>
+          <CardDescription>Search and filter feedback entries</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Search */}
@@ -130,10 +127,7 @@ export const RawFeedView = () => {
 
             <div>
               <label className="text-sm font-medium mb-2 block">Sentiment</label>
-              <Select
-                value={sentimentFilter}
-                onValueChange={(value: any) => setSentimentFilter(value)}
-              >
+              <Select value={sentimentFilter} onValueChange={(value: any) => setSentimentFilter(value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -178,7 +172,7 @@ export const RawFeedView = () => {
 
           <div className="flex items-center justify-between pt-2">
             <p className="text-sm text-muted-foreground">
-              Showing {filteredAndSortedData.length} of {mockFeedbackData.length} entries
+              {isLoading ? "Loading..." : `Showing ${filteredData?.length || 0} entries`}
             </p>
             <Button
               variant="outline"
@@ -203,62 +197,78 @@ export const RawFeedView = () => {
           <CardDescription>Complete list of customer feedback with all metadata</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Author</TableHead>
-                  <TableHead>Topic</TableHead>
-                  <TableHead>Sentiment</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Engagement</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAndSortedData.map((entry) => (
-                  <TableRow
-                    key={entry.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => setSelectedEntry(entry)}
-                  >
-                    <TableCell>
-                      <Badge variant="outline" className={sourceColors[entry.source]}>
-                        {entry.source}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-medium">{entry.author}</TableCell>
-                    <TableCell>{entry.topic}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={sentimentColors[entry.sentiment]}>
-                        {entry.sentiment}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {entry.feedback_type.replace("_", " ")}
-                    </TableCell>
-                    <TableCell>{entry.engagement_score}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(entry.timestamp)}
-                    </TableCell>
-                    <TableCell>
-                      <a
-                        href={entry.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-1 text-primary hover:underline"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </TableCell>
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Author</TableHead>
+                    <TableHead>Topic</TableHead>
+                    <TableHead>Sentiment</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Engagement</TableHead>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredData && filteredData.length > 0 ? (
+                    filteredData.map((entry) => (
+                      <TableRow
+                        key={entry.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setSelectedEntry(entry)}
+                      >
+                        <TableCell>
+                          <Badge variant="outline" className={sourceColors[entry.source]}>
+                            {entry.source}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">{entry.author}</TableCell>
+                        <TableCell>{entry.topic}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={sentimentColors[entry.sentiment]}>
+                            {entry.sentiment}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {entry.feedback_type.replace("_", " ")}
+                        </TableCell>
+                        <TableCell>{entry.engagement_score}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(entry.timestamp)}
+                        </TableCell>
+                        <TableCell>
+                          <a
+                            href={entry.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 text-primary hover:underline"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                        No feedback entries found. Try adjusting your filters or run the Reddit ingestion function.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
