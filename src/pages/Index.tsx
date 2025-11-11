@@ -58,13 +58,14 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
-            <div className="flex justify-end">
-              <div className="w-full lg:w-96">
+            <div className="grid gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <StatsCards />
+              </div>
+              <div>
                 <DataIngestionPanel />
               </div>
             </div>
-            
-            <StatsCards />
             
             <div className="grid gap-6 lg:grid-cols-2">
               <SentimentChart />
