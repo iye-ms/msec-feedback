@@ -74,30 +74,39 @@ export type Database = {
           emerging_issues: Json
           id: string
           report_date: string
+          sentiment_breakdown: Json
           sentiment_distribution: Json
           summary: string
           top_topics: Json
           total_feedback: number
+          week_end: string
+          week_start: string
         }
         Insert: {
           created_at?: string
           emerging_issues?: Json
           id?: string
           report_date: string
+          sentiment_breakdown?: Json
           sentiment_distribution?: Json
           summary: string
           top_topics?: Json
           total_feedback?: number
+          week_end: string
+          week_start: string
         }
         Update: {
           created_at?: string
           emerging_issues?: Json
           id?: string
           report_date?: string
+          sentiment_breakdown?: Json
           sentiment_distribution?: Json
           summary?: string
           top_topics?: Json
           total_feedback?: number
+          week_end?: string
+          week_start?: string
         }
         Relationships: []
       }
