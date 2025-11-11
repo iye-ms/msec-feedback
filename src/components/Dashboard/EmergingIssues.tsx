@@ -19,7 +19,7 @@ export const EmergingIssues = () => {
 
       if (error) throw error;
 
-      const topicCounts = feedbackData?.reduce((acc, entry) => {
+      const topicCounts: Record<string, { total: number; negative: number }> = feedbackData?.reduce((acc, entry) => {
         if (!acc[entry.topic]) {
           acc[entry.topic] = { total: 0, negative: 0 };
         }

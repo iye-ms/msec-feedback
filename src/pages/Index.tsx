@@ -8,6 +8,7 @@ import { EmergingIssues } from "@/components/Dashboard/EmergingIssues";
 import { TopicsView } from "@/components/Topics/TopicsView";
 import { RawFeedView } from "@/components/Feed/RawFeedView";
 import { ReportsView } from "@/components/Reports/ReportsView";
+import { SetupBanner } from "@/components/SetupBanner";
 
 const Index = () => {
   return (
@@ -31,6 +32,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
+        <SetupBanner />
         <Tabs defaultValue="dashboard" className="space-y-6">
           <TabsList className="bg-card border border-border shadow-sm">
             <TabsTrigger value="dashboard" className="gap-2">

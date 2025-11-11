@@ -18,7 +18,7 @@ export const TopicsChart = () => {
 
       if (error) throw error;
 
-      const topicCounts = feedbackData?.reduce((acc, entry) => {
+      const topicCounts: Record<string, number> = feedbackData?.reduce((acc, entry) => {
         acc[entry.topic] = (acc[entry.topic] || 0) + 1;
         return acc;
       }, {} as Record<string, number>) || {};
