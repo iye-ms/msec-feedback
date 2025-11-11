@@ -185,7 +185,15 @@ export const TopicsView = () => {
                     </div>
                   </div>
 
-                  <Button variant="outline" className="w-full" size="sm">
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedTopic(topic);
+                    }}
+                  >
                     View Details
                   </Button>
                 </CardContent>
