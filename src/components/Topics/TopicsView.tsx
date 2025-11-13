@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, TrendingUp, TrendingDown, Minus, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -201,53 +202,64 @@ export const TopicsView = () => {
             ))}
           </div>
 
-          {/* Topic Detail Modal */}
-          {selectedTopic && (
-            <Card className="shadow-lg mt-6">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle>{selectedTopic.topic}</CardTitle>
-                    <CardDescription>
+          {/* Topic Detail Dialog */}
+          <Dialog open={!!selectedTopic} onOpenChange={(open) => !open && setSelectedTopic(null)}>
+            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+              {selectedTopic && (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="text-2xl">{selectedTopic.topic}</DialogTitle>
+                    <p className="text-muted-foreground">
                       {selectedTopic.mention_count} mentions • Avg. sentiment:{" "}
                       <span className={getSentimentColor(selectedTopic.avg_sentiment)}>
                         {getSentimentLabel(selectedTopic.avg_sentiment)}
                       </span>
-                    </CardDescription>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedTopic(null)}>
-                    Close
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-semibold mb-2">Sample Feedback</h4>
-                  <div className="space-y-3">
-                    {selectedTopic.sample_posts.map((post, idx) => (
-                      <div key={idx} className="p-4 rounded-lg border border-border bg-muted/50">
-                        <p className="text-sm mb-2">{post.content.substring(0, 200)}...</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{post.author}</span>
-                          <span>•</span>
-                          <span>{formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}</span>
-                          <a
-                            href={post.url}
-                            className="flex items-center gap-1 text-primary hover:underline ml-auto"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            View <ExternalLink className="h-3 w-3" />
-                          </a>
-                        </div>
+                    </p>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4 mt-4">
+                    {/* Sentiment Breakdown */}
+                    <div className="flex gap-2 flex-wrap">
+                      <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                        {selectedTopic.positive_count} positive
+                      </Badge>
+                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                        {selectedTopic.neutral_count} neutral
+                      </Badge>
+                      <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
+                        {selectedTopic.negative_count} negative
+                      </Badge>
+                    </div>
+
+                    {/* Sample Feedback */}
+                    <div>
+                      <h4 className="font-semibold mb-3">Sample Feedback</h4>
+                      <div className="space-y-3">
+                        {selectedTopic.sample_posts.map((post, idx) => (
+                          <div key={idx} className="p-4 rounded-lg border border-border bg-muted/50">
+                            <p className="text-sm mb-3">{post.content.substring(0, 200)}...</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>{post.author}</span>
+                              <span>•</span>
+                              <span>{formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}</span>
+                              <a
+                                href={post.url}
+                                className="flex items-center gap-1 text-primary hover:underline ml-auto"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                View on Reddit <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </div>
