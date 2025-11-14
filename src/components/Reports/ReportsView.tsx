@@ -302,7 +302,9 @@ export const ReportsView = () => {
             </div>
             <div>
               <CardTitle className="text-2xl">Executive Summary</CardTitle>
-              <CardDescription>AI-generated insights and recommendations</CardDescription>
+              <CardDescription>
+                AI-generated insights and recommendations for {new Date(report.week_start).toLocaleDateString()} - {new Date(report.week_end).toLocaleDateString()}
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
