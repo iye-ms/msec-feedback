@@ -123,9 +123,9 @@ Use professional business language. Be specific and data-driven. Highlight urgen
     const weekStart = weekAgo.toISOString().split("T")[0];
     const weekEnd = new Date().toISOString().split("T")[0];
 
-    const { data: reportData, error: insertError } = await supabase
+    const { data: reportData, error: upsertError } = await supabase
       .from("weekly_reports")
-      .insert({
+      .upsert({
         report_date: weekEnd,
         week_start: weekStart,
         week_end: weekEnd,
@@ -134,11 +134,13 @@ Use professional business language. Be specific and data-driven. Highlight urgen
         top_topics: topTopics,
         emerging_issues: emergingIssues,
         summary,
+      }, {
+        onConflict: 'report_date'
       })
       .select()
       .single();
 
-    if (insertError) throw insertError;
+    if (upsertError) throw upsertError;
 
     return new Response(JSON.stringify({ success: true, report: reportData }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
