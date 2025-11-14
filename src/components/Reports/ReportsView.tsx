@@ -293,8 +293,19 @@ export const ReportsView = () => {
           </div>
         </CardHeader>
         <CardContent className="pt-6">
-          <div className="prose prose-sm max-w-none dark:prose-invert leading-relaxed text-foreground/90 space-y-4">
-            <ReactMarkdown>
+          <div className="prose prose-sm max-w-none dark:prose-invert leading-relaxed text-foreground/90">
+            <ReactMarkdown
+              components={{
+                ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-2 my-4" {...props} />,
+                ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-2 my-4" {...props} />,
+                li: ({node, ...props}) => <li className="ml-4" {...props} />,
+                p: ({node, ...props}) => <p className="my-3" {...props} />,
+                h1: ({node, ...props}) => <h1 className="text-xl font-bold mt-6 mb-3" {...props} />,
+                h2: ({node, ...props}) => <h2 className="text-lg font-bold mt-5 mb-2" {...props} />,
+                h3: ({node, ...props}) => <h3 className="text-base font-semibold mt-4 mb-2" {...props} />,
+                strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
+              }}
+            >
               {report.summary}
             </ReactMarkdown>
           </div>
