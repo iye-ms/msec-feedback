@@ -279,14 +279,24 @@ export const ReportsView = () => {
       )}
 
       {/* AI Summary */}
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle>Executive Summary</CardTitle>
-          <CardDescription>AI-generated insights and recommendations</CardDescription>
+      <Card className="shadow-sm border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
+        <CardHeader className="border-b border-primary/10 pb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <FileText className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-2xl">Executive Summary</CardTitle>
+              <CardDescription>AI-generated insights and recommendations</CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            <div dangerouslySetInnerHTML={{ __html: report.summary.replace(/\n/g, '<br/>') }} />
+        <CardContent className="pt-6">
+          <div className="prose prose-sm max-w-none dark:prose-invert leading-relaxed">
+            <div 
+              className="text-foreground/90 space-y-4 [&>br]:block [&>br]:my-2"
+              dangerouslySetInnerHTML={{ __html: report.summary.replace(/\n/g, '<br/>') }} 
+            />
           </div>
         </CardContent>
       </Card>
