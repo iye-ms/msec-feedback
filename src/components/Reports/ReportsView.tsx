@@ -1,12 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download, Calendar, TrendingUp } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileText, Download, Calendar, TrendingUp, History } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { ReportHistory } from "./ReportHistory";
 
 export const ReportsView = () => {
   const { data: report, isLoading } = useQuery({
@@ -154,7 +156,19 @@ export const ReportsView = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <Tabs defaultValue="latest" className="space-y-6">
+      <TabsList className="bg-card border border-border shadow-sm">
+        <TabsTrigger value="latest" className="gap-2">
+          <FileText className="h-4 w-4" />
+          Latest Report
+        </TabsTrigger>
+        <TabsTrigger value="history" className="gap-2">
+          <History className="h-4 w-4" />
+          All Reports
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="latest" className="space-y-6">
       {/* Report Header */}
       <Card className="shadow-sm">
         <CardHeader>
@@ -311,6 +325,11 @@ export const ReportsView = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </TabsContent>
+
+      <TabsContent value="history">
+        <ReportHistory />
+      </TabsContent>
+    </Tabs>
   );
 };
