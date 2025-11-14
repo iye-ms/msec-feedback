@@ -19,6 +19,10 @@ serve(async (req) => {
     // Get feedback from the past 7 days
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
+    
+    // Calculate week start and end dates
+    const weekEnd = new Date().toISOString().split("T")[0];
+    const weekStart = weekAgo.toISOString().split("T")[0];
 
     const { data: feedbackData, error: fetchError } = await supabase
       .from("feedback_entries")
@@ -91,11 +95,12 @@ Generate a comprehensive weekly report in markdown format that includes:
 - Top feature requests
 - Actionable recommendations for the product team
 
-Use professional business language. Be specific and data-driven. Highlight urgent issues clearly.`,
+Use professional business language. Be specific and data-driven. Highlight urgent issues clearly.
+IMPORTANT: Include the reporting period dates (${new Date(weekStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${new Date(weekEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}) at the start of the summary.`,
           },
           {
             role: "user",
-            content: `Generate a weekly report based on this data:\n${JSON.stringify(summaryData, null, 2)}`,
+            content: `Generate a weekly report for the period ${weekStart} to ${weekEnd} based on this data:\n${JSON.stringify(summaryData, null, 2)}`,
           },
         ],
       }),
@@ -119,9 +124,7 @@ Use professional business language. Be specific and data-driven. Highlight urgen
       .slice(0, 3)
       .map(([topic, count]) => `${topic} (${count} mentions, high negative sentiment)`);
 
-    // Save report to database
-    const weekStart = weekAgo.toISOString().split("T")[0];
-    const weekEnd = new Date().toISOString().split("T")[0];
+    // Save report to database (week dates already calculated above)
 
     const { data: reportData, error: upsertError } = await supabase
       .from("weekly_reports")
