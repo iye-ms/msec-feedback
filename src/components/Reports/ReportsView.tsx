@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 
 export const ReportsView = () => {
   const { data: report, isLoading } = useQuery({
@@ -292,11 +293,10 @@ export const ReportsView = () => {
           </div>
         </CardHeader>
         <CardContent className="pt-6">
-          <div className="prose prose-sm max-w-none dark:prose-invert leading-relaxed">
-            <div 
-              className="text-foreground/90 space-y-4 [&>br]:block [&>br]:my-2"
-              dangerouslySetInnerHTML={{ __html: report.summary.replace(/\n/g, '<br/>') }} 
-            />
+          <div className="prose prose-sm max-w-none dark:prose-invert leading-relaxed text-foreground/90 space-y-4">
+            <ReactMarkdown>
+              {report.summary}
+            </ReactMarkdown>
           </div>
         </CardContent>
       </Card>
