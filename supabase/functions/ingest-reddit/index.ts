@@ -51,13 +51,13 @@ serve(async (req) => {
 
     const { access_token } = await authResponse.json();
 
-    // Fetch posts from r/Intune
+    // Fetch posts from r/entra
     const redditResponse = await fetch(
-      "https://oauth.reddit.com/r/Intune/new.json?limit=50",
+      "https://oauth.reddit.com/r/entra/new.json?limit=50",
       {
         headers: {
           Authorization: `Bearer ${access_token}`,
-          "User-Agent": "IntuneTrackerBot/1.0",
+          "User-Agent": "EntraTrackerBot/1.0",
         },
       }
     );
