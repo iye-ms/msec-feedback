@@ -1,13 +1,18 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, TrendingUp } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Product } from "@/components/ProductSelector";
 
-export const EmergingIssues = () => {
+interface EmergingIssuesProps {
+  selectedProduct: Product;
+}
+
+export const EmergingIssues = ({ selectedProduct }: EmergingIssuesProps) => {
   const { data: emergingIssues, isLoading } = useQuery({
-    queryKey: ['emerging-issues'],
+    queryKey: ['emerging-issues', selectedProduct],
     queryFn: async () => {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
@@ -15,6 +20,7 @@ export const EmergingIssues = () => {
       const { data: feedbackData, error } = await supabase
         .from('feedback_entries')
         .select('topic, sentiment')
+        .eq('product', selectedProduct)
         .gte('timestamp', weekAgo.toISOString());
 
       if (error) throw error;

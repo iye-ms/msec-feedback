@@ -3,10 +3,15 @@ import { TrendingUp, MessageSquare, ThumbsUp, AlertTriangle } from "lucide-react
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Product } from "@/components/ProductSelector";
 
-export const StatsCards = () => {
+interface StatsCardsProps {
+  selectedProduct: Product;
+}
+
+export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['dashboard-stats'],
+    queryKey: ['dashboard-stats', selectedProduct],
     queryFn: async () => {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
@@ -15,6 +20,7 @@ export const StatsCards = () => {
       const { data: currentData, error: currentError } = await supabase
         .from('feedback_entries')
         .select('sentiment, topic')
+        .eq('product', selectedProduct)
         .gte('timestamp', weekAgo.toISOString());
 
       if (currentError) throw currentError;
@@ -25,6 +31,7 @@ export const StatsCards = () => {
       const { data: previousData, error: previousError } = await supabase
         .from('feedback_entries')
         .select('sentiment')
+        .eq('product', selectedProduct)
         .gte('timestamp', twoWeeksAgo.toISOString())
         .lt('timestamp', weekAgo.toISOString());
 

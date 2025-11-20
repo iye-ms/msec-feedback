@@ -3,10 +3,15 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Product } from "@/components/ProductSelector";
 
-export const TopicsChart = () => {
+interface TopicsChartProps {
+  selectedProduct: Product;
+}
+
+export const TopicsChart = ({ selectedProduct }: TopicsChartProps) => {
   const { data, isLoading } = useQuery({
-    queryKey: ['top-topics'],
+    queryKey: ['top-topics', selectedProduct],
     queryFn: async () => {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
@@ -14,6 +19,7 @@ export const TopicsChart = () => {
       const { data: feedbackData, error } = await supabase
         .from('feedback_entries')
         .select('topic')
+        .eq('product', selectedProduct)
         .gte('timestamp', weekAgo.toISOString());
 
       if (error) throw error;

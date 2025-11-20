@@ -4,24 +4,31 @@ import { Download, FileText, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import type { Product } from "@/components/ProductSelector";
 
-export const DataIngestionPanel = () => {
+interface DataIngestionPanelProps {
+  selectedProduct: Product;
+}
+
+export const DataIngestionPanel = ({ selectedProduct }: DataIngestionPanelProps) => {
   const [isIngesting, setIsIngesting] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const handleIngestReddit = async () => {
     try {
       setIsIngesting(true);
-      toast.info("Fetching Reddit posts...");
+      toast.info(`Fetching Reddit posts for ${selectedProduct}...`);
       
-      const { data, error } = await supabase.functions.invoke('ingest-reddit');
+      const { data, error } = await supabase.functions.invoke('ingest-reddit', {
+        body: { product: selectedProduct },
+      });
       
       if (error) {
         console.error('Ingestion error:', error);
         throw error;
       }
       
-      toast.success(`Success! ${data?.new_posts || 0} new posts added`);
+      toast.success(`Success! ${data?.new_posts || 0} new posts added for ${selectedProduct.toUpperCase()}`);
       setTimeout(() => window.location.reload(), 1500);
     } catch (error: any) {
       console.error('Failed to ingest:', error);
@@ -73,10 +80,10 @@ export const DataIngestionPanel = () => {
             size="sm"
           >
             <Download className="h-3 w-3 mr-2" />
-            {isIngesting ? "Ingesting..." : "Ingest Reddit Posts"}
+            {isIngesting ? "Ingesting..." : `Ingest ${selectedProduct.toUpperCase()} Posts`}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Fetch r/entra posts
+            Fetch r/{selectedProduct === "purview" ? "MicrosoftPurview" : selectedProduct} posts
           </p>
         </div>
 

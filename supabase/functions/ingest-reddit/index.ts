@@ -6,6 +6,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Product to subreddit mapping
+const PRODUCT_SUBREDDITS: Record<string, string> = {
+  intune: "Intune",
+  entra: "entra",
+  defender: "DefenderATP",
+  azure: "AZURE",
+  purview: "MicrosoftPurview",
+};
+
 interface RedditPost {
   id: string;
   author: string;
@@ -23,6 +32,16 @@ serve(async (req) => {
   }
 
   try {
+    const { product = "entra" } = await req.json();
+    
+    // Validate product
+    if (!PRODUCT_SUBREDDITS[product]) {
+      throw new Error(`Invalid product: ${product}. Valid options: ${Object.keys(PRODUCT_SUBREDDITS).join(", ")}`);
+    }
+
+    const subreddit = PRODUCT_SUBREDDITS[product];
+    console.log(`Ingesting Reddit posts from r/${subreddit} for product: ${product}`);
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -51,13 +70,13 @@ serve(async (req) => {
 
     const { access_token } = await authResponse.json();
 
-    // Fetch posts from r/entra
+    // Fetch posts from the appropriate subreddit
     const redditResponse = await fetch(
-      "https://oauth.reddit.com/r/entra/new.json?limit=50",
+      `https://oauth.reddit.com/r/${subreddit}/new.json?limit=50`,
       {
         headers: {
           Authorization: `Bearer ${access_token}`,
-          "User-Agent": "EntraTrackerBot/1.0",
+          "User-Agent": `${product.charAt(0).toUpperCase() + product.slice(1)}TrackerBot/1.0`,
         },
       }
     );
@@ -99,7 +118,7 @@ for (const post of posts) {
       throw classificationError;
     }
 
-    // Insert into database with required fields
+    // Insert into database with required fields including product
     const { error: insertError } = await supabase.from("feedback_entries").insert({
       reddit_id: post.id,
       source: "Reddit",
@@ -113,6 +132,7 @@ for (const post of posts) {
       feedback_type: classification?.feedback_type ?? "question",
       engagement_score: post.score,
       score: post.score,
+      product: product,
     });
 
     if (insertError) {
@@ -130,7 +150,9 @@ for (const post of posts) {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Processed ${posts.length} posts: ${newPosts} new, ${errors} errors`,
+        message: `Processed ${posts.length} posts from r/${subreddit}: ${newPosts} new, ${errors} errors`,
+        product,
+        subreddit,
         new_posts: newPosts,
         total_processed: posts.length,
       }),
