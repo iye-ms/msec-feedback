@@ -91,7 +91,7 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="topics">
-            <TopicsView />
+            <TopicsView selectedProduct={selectedProduct} />
           </TabsContent>
 
           <TabsContent value="trends">
@@ -108,11 +108,11 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="feed">
-            <RawFeedView />
+            <RawFeedView selectedProduct={selectedProduct} />
           </TabsContent>
 
           <TabsContent value="reports">
-            <ReportsView />
+            <ReportsView selectedProduct={selectedProduct} />
           </TabsContent>
         </Tabs>
       </main>

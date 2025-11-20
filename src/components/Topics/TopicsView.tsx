@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
+import type { Product } from "@/components/ProductSelector";
 
 interface TopicSummary {
   topic: string;
@@ -26,12 +27,16 @@ interface TopicSummary {
   }>;
 }
 
-export const TopicsView = () => {
+interface TopicsViewProps {
+  selectedProduct: Product;
+}
+
+export const TopicsView = ({ selectedProduct }: TopicsViewProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTopic, setSelectedTopic] = useState<TopicSummary | null>(null);
 
   const { data: topicSummaries, isLoading } = useQuery({
-    queryKey: ['topic-summaries'],
+    queryKey: ['topic-summaries', selectedProduct],
     queryFn: async () => {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
@@ -39,6 +44,7 @@ export const TopicsView = () => {
       const { data: currentData, error } = await supabase
         .from('feedback_entries')
         .select('*')
+        .eq('product', selectedProduct)
         .gte('timestamp', weekAgo.toISOString());
 
       if (error) throw error;

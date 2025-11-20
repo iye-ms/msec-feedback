@@ -24,8 +24,13 @@ import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { FeedbackEntry, FeedbackSource, Sentiment, FeedbackType } from "@/types/feedback";
+import type { Product } from "@/components/ProductSelector";
 
-export const RawFeedView = () => {
+interface RawFeedViewProps {
+  selectedProduct: Product;
+}
+
+export const RawFeedView = ({ selectedProduct }: RawFeedViewProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<FeedbackSource | "all">("all");
   const [sentimentFilter, setSentimentFilter] = useState<Sentiment | "all">("all");
@@ -34,9 +39,9 @@ export const RawFeedView = () => {
   const [selectedEntry, setSelectedEntry] = useState<FeedbackEntry | null>(null);
 
   const { data: feedbackData, isLoading } = useQuery({
-    queryKey: ['raw-feedback', sourceFilter, sentimentFilter, typeFilter, sortBy],
+    queryKey: ['raw-feedback', selectedProduct, sourceFilter, sentimentFilter, typeFilter, sortBy],
     queryFn: async () => {
-      let query = supabase.from('feedback_entries').select('*');
+      let query = supabase.from('feedback_entries').select('*').eq('product', selectedProduct);
 
       if (sourceFilter !== 'all') {
         query = query.eq('source', sourceFilter);
