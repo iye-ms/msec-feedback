@@ -1,5 +1,5 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, Lock, Cloud, Smartphone } from "lucide-react";
+import { Shield, Lock, Cloud, Smartphone, FileSearch } from "lucide-react";
 
 export type Product = "intune" | "entra" | "defender" | "azure" | "purview";
 
@@ -13,7 +13,7 @@ const products = [
   { value: "entra" as Product, label: "Entra", icon: Lock },
   { value: "defender" as Product, label: "Defender", icon: Shield },
   { value: "azure" as Product, label: "Azure", icon: Cloud },
-  { value: "purview" as Product, label: "Purview", icon: Shield },
+  { value: "purview" as Product, label: "Purview", icon: FileSearch },
 ];
 
 export const ProductSelector = ({ selectedProduct, onProductChange }: ProductSelectorProps) => {
