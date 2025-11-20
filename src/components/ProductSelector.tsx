@@ -17,17 +17,12 @@ const products = [
 ];
 
 export const ProductSelector = ({ selectedProduct, onProductChange }: ProductSelectorProps) => {
-  const SelectedIcon = products.find(p => p.value === selectedProduct)?.icon || Smartphone;
-
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm text-muted-foreground">Product:</span>
       <Select value={selectedProduct} onValueChange={onProductChange}>
         <SelectTrigger className="w-[180px] bg-background border-border">
-          <div className="flex items-center gap-2">
-            <SelectedIcon className="h-4 w-4" />
-            <SelectValue />
-          </div>
+          <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {products.map((product) => {
