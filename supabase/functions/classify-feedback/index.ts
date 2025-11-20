@@ -34,7 +34,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an AI assistant that classifies customer feedback about Microsoft Intune. 
+            content: `You are an AI assistant that classifies customer feedback about Microsoft Entra. 
 For each piece of feedback, analyze and return a JSON object with:
 - sentiment: "positive", "neutral", or "negative"
 - topic: the main product area mentioned (e.g., "macOS Deployment", "Android Management", "Conditional Access", "Device Enrollment", "App Install Issues", "iOS Management", "Windows Autopilot", "Security Features", "Compliance Policies", "Policy Management", "Reporting", "Company Portal", "Script Deployment", "Remote Actions")
@@ -52,7 +52,7 @@ Only return valid JSON, no additional text.`,
             type: "function",
             function: {
               name: "classify_feedback",
-              description: "Classify customer feedback about Microsoft Intune",
+              description: "Classify customer feedback about Microsoft Entra",
               parameters: {
                 type: "object",
                 properties: {

@@ -76,7 +76,7 @@ export const DataIngestionPanel = () => {
             {isIngesting ? "Ingesting..." : "Ingest Reddit Posts"}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Fetch r/Intune posts
+            Fetch r/entra posts
           </p>
         </div>
 

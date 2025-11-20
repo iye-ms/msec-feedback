@@ -22,7 +22,7 @@ const Index = () => {
               <LayoutDashboard className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Intune Feedback Tracker</h1>
+              <h1 className="text-2xl font-bold text-foreground">Entra Feedback Tracker</h1>
               <p className="text-sm text-muted-foreground">
                 AI-powered customer feedback analysis and insights
               </p>
