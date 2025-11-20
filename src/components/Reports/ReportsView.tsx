@@ -22,6 +22,7 @@ export const ReportsView = ({ selectedProduct }: ReportsViewProps) => {
       const { data, error } = await supabase
         .from('weekly_reports')
         .select('*')
+        .eq('product', selectedProduct)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -105,13 +106,15 @@ export const ReportsView = ({ selectedProduct }: ReportsViewProps) => {
 
   const generateNewReport = async () => {
     try {
-      toast.info("Generating new weekly report...");
+      toast.info(`Generating new weekly report for ${selectedProduct.toUpperCase()}...`);
       
-      const { data, error } = await supabase.functions.invoke('generate-weekly-report');
+      const { data, error } = await supabase.functions.invoke('generate-weekly-report', {
+        body: { product: selectedProduct },
+      });
       
       if (error) throw error;
       
-      toast.success("Report generated successfully!");
+      toast.success(`Report for ${selectedProduct.toUpperCase()} generated successfully!`);
       window.location.reload();
     } catch (error) {
       console.error(error);
@@ -150,7 +153,7 @@ export const ReportsView = ({ selectedProduct }: ReportsViewProps) => {
           <div>
             <h3 className="text-lg font-semibold mb-2">No Reports Yet</h3>
             <p className="text-muted-foreground mb-4">
-              Weekly reports are generated automatically every Monday at 9 AM, or you can generate one manually.
+              Weekly reports for {selectedProduct.toUpperCase()} are generated automatically every Monday at 9 AM, or you can generate one manually.
             </p>
             <Button onClick={generateNewReport}>
               Generate Report Now

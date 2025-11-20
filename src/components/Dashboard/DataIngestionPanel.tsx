@@ -41,16 +41,18 @@ export const DataIngestionPanel = ({ selectedProduct }: DataIngestionPanelProps)
   const handleGenerateReport = async () => {
     try {
       setIsGeneratingReport(true);
-      toast.info("Generating weekly report with AI...");
+      toast.info(`Generating weekly report for ${selectedProduct.toUpperCase()}...`);
       
-      const { data, error } = await supabase.functions.invoke('generate-weekly-report');
+      const { data, error } = await supabase.functions.invoke('generate-weekly-report', {
+        body: { product: selectedProduct },
+      });
       
       if (error) {
         console.error('Report error:', error);
         throw error;
       }
       
-      toast.success("Weekly report generated successfully!");
+      toast.success(`Weekly report for ${selectedProduct.toUpperCase()} generated successfully!`);
       setTimeout(() => window.location.reload(), 1500);
     } catch (error: any) {
       console.error('Failed to generate report:', error);
