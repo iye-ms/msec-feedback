@@ -135,7 +135,36 @@ IMPORTANT: Include the reporting period dates (${new Date(weekStart).toLocaleDat
     });
 
     if (!aiResponse.ok) {
-      throw new Error("AI summary generation failed");
+      const errorText = await aiResponse.text();
+      console.error("AI gateway error:", aiResponse.status, errorText);
+
+      if (aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({
+            error: "Rate limits exceeded, please try again later.",
+            details: errorText,
+          }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({
+            error: "Payment required, please add funds to your Lovable AI workspace.",
+            details: errorText,
+          }),
+          {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      throw new Error(`AI summary generation failed: ${aiResponse.status} ${errorText}`);
     }
 
     const aiData = await aiResponse.json();
