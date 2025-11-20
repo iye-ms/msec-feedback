@@ -1,6 +1,6 @@
-# Intune Feedback Tracker - Setup Guide
+# Entra Feedback Tracker - Setup Guide
 
-This guide will help you set up the Intune Feedback Tracker application with AI-powered feedback analysis.
+This guide will help you set up the Entra Feedback Tracker application with AI-powered feedback analysis.
 
 ## Option 1: Using External Supabase (Recommended if Cloud is disabled)
 
@@ -137,12 +137,12 @@ curl -X POST https://your-project.supabase.co/functions/v1/ingest-reddit \
 
 ## Overview
 
-This application tracks and analyzes customer feedback about Microsoft Intune from multiple sources using AI-powered classification and automated data ingestion.
+This application tracks and analyzes customer feedback about Microsoft Entra from multiple sources using AI-powered classification and automated data ingestion.
 
 ## Prerequisites
 
 1. **Lovable Cloud** - For database and edge functions
-2. **Reddit API Access** - For ingesting posts from r/Intune
+2. **Reddit API Access** - For ingesting posts from r/entra
 3. **Lovable AI** - For automated feedback classification
 
 ## Setup Steps
@@ -200,7 +200,7 @@ The following edge functions are included:
 
 2. **ingest-reddit** - Reddit data ingestion
    - Path: `supabase/functions/ingest-reddit`
-   - Purpose: Fetches posts from r/Intune and stores them
+   - Purpose: Fetches posts from r/entra and stores them
 
 3. **generate-weekly-report** - Weekly report generation
    - Path: `supabase/functions/generate-weekly-report`
@@ -246,7 +246,7 @@ curl -X POST https://[your-project-id].supabase.co/functions/v1/classify-feedbac
 ```
 ┌─────────────────┐
 │  Reddit API     │
-│  r/Intune       │
+│  r/entra        │
 └────────┬────────┘
          │
          ▼
@@ -300,7 +300,7 @@ Data is fetched from your Supabase database using the Supabase client.
 ### Add LinkedIn Integration
 
 1. Create a new edge function `ingest-linkedin`
-2. Use LinkedIn API or RSS feeds to fetch posts mentioning "Intune"
+2. Use LinkedIn API or RSS feeds to fetch posts mentioning "Entra"
 3. Follow the same pattern as `ingest-reddit`
 
 ### Add More Data Sources

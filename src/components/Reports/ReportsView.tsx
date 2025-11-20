@@ -84,7 +84,7 @@ export const ReportsView = () => {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `intune-feedback-${report?.week_start}-to-${report?.week_end}.csv`);
+    link.setAttribute("download", `entra-feedback-${report?.week_start}-to-${report?.week_end}.csv`);
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();

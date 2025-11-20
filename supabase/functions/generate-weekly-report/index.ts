@@ -86,7 +86,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an AI assistant that generates executive summaries of customer feedback for Microsoft Intune product managers.
+            content: `You are an AI assistant that generates executive summaries of customer feedback for Microsoft Entra product managers.
 Generate a comprehensive weekly report in markdown format that includes:
 - Overall sentiment trend
 - Key highlights (positive feedback and praise)
