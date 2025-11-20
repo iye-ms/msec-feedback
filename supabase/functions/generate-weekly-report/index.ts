@@ -12,11 +12,15 @@ serve(async (req) => {
   }
 
   try {
+    const { product = "entra" } = await req.json();
+    
+    console.log(`Generating weekly report for product: ${product}`);
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get feedback from the past 7 days
+    // Get feedback from the past 7 days for the specific product
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     
@@ -27,10 +31,23 @@ serve(async (req) => {
     const { data: feedbackData, error: fetchError } = await supabase
       .from("feedback_entries")
       .select("*")
+      .eq("product", product)
       .gte("timestamp", weekAgo.toISOString())
       .order("timestamp", { ascending: false });
 
     if (fetchError) throw fetchError;
+
+    if (!feedbackData || feedbackData.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: `No feedback data found for ${product} in the past 7 days` 
+        }), 
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
     // Calculate statistics
     const totalFeedback = feedbackData.length;
@@ -54,6 +71,7 @@ serve(async (req) => {
 
     // Prepare data for AI summarization
     const summaryData = {
+      product: product.toUpperCase(),
       total_feedback: totalFeedback,
       sentiment_breakdown: {
         positive: Math.round((sentimentCounts.positive / totalFeedback) * 100),
@@ -75,6 +93,16 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    const productNames: Record<string, string> = {
+      intune: "Microsoft Intune",
+      entra: "Microsoft Entra",
+      defender: "Microsoft Defender",
+      azure: "Microsoft Azure",
+      purview: "Microsoft Purview",
+    };
+
+    const productName = productNames[product] || product.toUpperCase();
+
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -86,9 +114,9 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an AI assistant that generates executive summaries of customer feedback for Microsoft Entra product managers.
+            content: `You are an AI assistant that generates executive summaries of customer feedback for ${productName} product managers.
 Generate a comprehensive weekly report in markdown format that includes:
-- Overall sentiment trend
+- Overall sentiment trend for ${productName}
 - Key highlights (positive feedback and praise)
 - Critical issues requiring immediate attention (with specific details)
 - Emerging patterns or spikes in mentions
@@ -100,7 +128,7 @@ IMPORTANT: Include the reporting period dates (${new Date(weekStart).toLocaleDat
           },
           {
             role: "user",
-            content: `Generate a weekly report for the period ${weekStart} to ${weekEnd} based on this data:\n${JSON.stringify(summaryData, null, 2)}`,
+            content: `Generate a weekly report for ${productName} for the period ${weekStart} to ${weekEnd} based on this data:\n${JSON.stringify(summaryData, null, 2)}`,
           },
         ],
       }),
@@ -124,8 +152,7 @@ IMPORTANT: Include the reporting period dates (${new Date(weekStart).toLocaleDat
       .slice(0, 3)
       .map(([topic, count]) => `${topic} (${count} mentions, high negative sentiment)`);
 
-    // Save report to database (week dates already calculated above)
-
+    // Save report to database with product
     const { data: reportData, error: upsertError } = await supabase
       .from("weekly_reports")
       .upsert({
@@ -137,17 +164,25 @@ IMPORTANT: Include the reporting period dates (${new Date(weekStart).toLocaleDat
         top_topics: topTopics,
         emerging_issues: emergingIssues,
         summary,
+        product: product,
       }, {
-        onConflict: 'report_date'
+        onConflict: 'report_date,product'
       })
       .select()
       .single();
 
     if (upsertError) throw upsertError;
 
-    return new Response(JSON.stringify({ success: true, report: reportData }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        report: reportData,
+        message: `Report generated for ${productName}`
+      }), 
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Report generation error:", error);
     return new Response(

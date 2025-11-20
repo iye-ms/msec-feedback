@@ -76,6 +76,7 @@ export type Database = {
           created_at: string
           emerging_issues: Json
           id: string
+          product: string
           report_date: string
           sentiment_breakdown: Json
           sentiment_distribution: Json
@@ -89,6 +90,7 @@ export type Database = {
           created_at?: string
           emerging_issues?: Json
           id?: string
+          product?: string
           report_date: string
           sentiment_breakdown?: Json
           sentiment_distribution?: Json
@@ -102,6 +104,7 @@ export type Database = {
           created_at?: string
           emerging_issues?: Json
           id?: string
+          product?: string
           report_date?: string
           sentiment_breakdown?: Json
           sentiment_distribution?: Json
