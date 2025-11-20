@@ -9,10 +9,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { ReportHistory } from "./ReportHistory";
+import type { Product } from "@/components/ProductSelector";
 
-export const ReportsView = () => {
+interface ReportsViewProps {
+  selectedProduct: Product;
+}
+
+export const ReportsView = ({ selectedProduct }: ReportsViewProps) => {
   const { data: report, isLoading } = useQuery({
-    queryKey: ['weekly-report'],
+    queryKey: ['weekly-report', selectedProduct],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('weekly_reports')
@@ -31,13 +36,14 @@ export const ReportsView = () => {
   });
 
   const { data: allFeedback } = useQuery({
-    queryKey: ['all-feedback-for-export'],
+    queryKey: ['all-feedback-for-export', selectedProduct],
     queryFn: async () => {
       if (!report) return [];
       
       const { data, error } = await supabase
         .from('feedback_entries')
         .select('*')
+        .eq('product', selectedProduct)
         .gte('timestamp', report.week_start)
         .lte('timestamp', report.week_end)
         .order('timestamp', { ascending: false });
@@ -84,7 +90,7 @@ export const ReportsView = () => {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `entra-feedback-${report?.week_start}-to-${report?.week_end}.csv`);
+    link.setAttribute("download", `${selectedProduct}-feedback-${report?.week_start}-to-${report?.week_end}.csv`);
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
