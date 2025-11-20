@@ -3,10 +3,15 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Product } from "@/components/ProductSelector";
 
-export const SentimentChart = () => {
+interface SentimentChartProps {
+  selectedProduct: Product;
+}
+
+export const SentimentChart = ({ selectedProduct }: SentimentChartProps) => {
   const { data, isLoading } = useQuery({
-    queryKey: ['sentiment-trends'],
+    queryKey: ['sentiment-trends', selectedProduct],
     queryFn: async () => {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
@@ -14,6 +19,7 @@ export const SentimentChart = () => {
       const { data: feedbackData, error } = await supabase
         .from('feedback_entries')
         .select('sentiment, timestamp')
+        .eq('product', selectedProduct)
         .gte('timestamp', weekAgo.toISOString())
         .order('timestamp', { ascending: true });
 

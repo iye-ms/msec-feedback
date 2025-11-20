@@ -22,6 +22,7 @@ export type Database = {
           engagement_score: number
           feedback_type: string | null
           id: string
+          product: string
           reddit_id: string
           score: number
           sentiment: string | null
@@ -39,6 +40,7 @@ export type Database = {
           engagement_score?: number
           feedback_type?: string | null
           id?: string
+          product?: string
           reddit_id: string
           score?: number
           sentiment?: string | null
@@ -56,6 +58,7 @@ export type Database = {
           engagement_score?: number
           feedback_type?: string | null
           id?: string
+          product?: string
           reddit_id?: string
           score?: number
           sentiment?: string | null

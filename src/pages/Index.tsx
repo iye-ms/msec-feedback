@@ -68,24 +68,24 @@ const Index = () => {
           <TabsContent value="dashboard" className="space-y-6">
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2">
-                <StatsCards />
+                <StatsCards selectedProduct={selectedProduct} />
               </div>
               <div>
-                <DataIngestionPanel />
+                <DataIngestionPanel selectedProduct={selectedProduct} />
               </div>
             </div>
             
             <div className="grid gap-6 lg:grid-cols-2">
-              <SentimentChart />
-              <TopicsChart />
+              <SentimentChart selectedProduct={selectedProduct} />
+              <TopicsChart selectedProduct={selectedProduct} />
             </div>
 
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2">
-                <RecentFeedback />
+                <RecentFeedback selectedProduct={selectedProduct} />
               </div>
               <div>
-                <EmergingIssues />
+                <EmergingIssues selectedProduct={selectedProduct} />
               </div>
             </div>
           </TabsContent>
@@ -96,7 +96,7 @@ const Index = () => {
 
           <TabsContent value="trends">
             <div className="space-y-6">
-              <SentimentChart />
+              <SentimentChart selectedProduct={selectedProduct} />
               <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
                 <TrendingUp className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Extended Historical Analysis</h3>

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
+import type { Product } from "@/components/ProductSelector";
 
 interface FeedbackEntry {
   id: string;
@@ -29,13 +30,18 @@ const sourceColors = {
   TechCommunity: "bg-chart-5/10 text-chart-5 border-chart-5/20",
 };
 
-export const RecentFeedback = () => {
+interface RecentFeedbackProps {
+  selectedProduct: Product;
+}
+
+export const RecentFeedback = ({ selectedProduct }: RecentFeedbackProps) => {
   const { data: feedbackData, isLoading } = useQuery({
-    queryKey: ['recent-feedback'],
+    queryKey: ['recent-feedback', selectedProduct],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('feedback_entries')
         .select('*')
+        .eq('product', selectedProduct)
         .order('timestamp', { ascending: false })
         .limit(5);
 
