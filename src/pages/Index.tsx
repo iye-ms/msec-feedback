@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, Tags, TrendingUp, List, FileText } from "lucide-react";
+import { LayoutDashboard, Tags, TrendingUp, List, FileText, ShieldCheck } from "lucide-react";
 import { SentimentChart } from "@/components/Dashboard/SentimentChart";
 import { TopicsChart } from "@/components/Dashboard/TopicsChart";
 import { StatsCards } from "@/components/Dashboard/StatsCards";
@@ -22,10 +22,10 @@ const Index = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-                <LayoutDashboard className="h-6 w-6 text-primary-foreground" />
+                <ShieldCheck className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Microsoft Feedback Tracker</h1>
+                <h1 className="text-2xl font-bold text-foreground">Microsoft Security Feedback Tracker</h1>
                 <p className="text-sm text-muted-foreground">
                   AI-powered customer feedback analysis and insights
                 </p>
