@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutDashboard, Tags, TrendingUp, List, FileText } from "lucide-react";
 import { SentimentChart } from "@/components/Dashboard/SentimentChart";
@@ -9,24 +10,31 @@ import { TopicsView } from "@/components/Topics/TopicsView";
 import { RawFeedView } from "@/components/Feed/RawFeedView";
 import { ReportsView } from "@/components/Reports/ReportsView";
 import { DataIngestionPanel } from "@/components/Dashboard/DataIngestionPanel";
-
+import { ProductSelector, type Product } from "@/components/ProductSelector";
 
 const Index = () => {
+  const [selectedProduct, setSelectedProduct] = useState<Product>("entra");
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card shadow-sm">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <LayoutDashboard className="h-6 w-6 text-primary-foreground" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
+                <LayoutDashboard className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Microsoft Feedback Tracker</h1>
+                <p className="text-sm text-muted-foreground">
+                  AI-powered customer feedback analysis and insights
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Entra Feedback Tracker</h1>
-              <p className="text-sm text-muted-foreground">
-                AI-powered customer feedback analysis and insights
-              </p>
-            </div>
+            <ProductSelector 
+              selectedProduct={selectedProduct} 
+              onProductChange={setSelectedProduct}
+            />
           </div>
         </div>
       </header>
