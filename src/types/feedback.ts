@@ -7,12 +7,14 @@ export interface FeedbackEntry {
   source: FeedbackSource;
   author: string;
   timestamp: string;
+  title: string;
   content: string;
   url: string;
   sentiment: Sentiment;
   topic: string;
   feedback_type: FeedbackType;
   engagement_score: number;
+  score: number;
   created_at: string;
 }
 
