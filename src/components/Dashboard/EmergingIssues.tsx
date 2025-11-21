@@ -1,16 +1,21 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
 import type { Product } from "@/components/ProductSelector";
+import type { FeedbackEntry } from "@/types/feedback";
 
 interface EmergingIssuesProps {
   selectedProduct: Product;
 }
 
 export const EmergingIssues = ({ selectedProduct }: EmergingIssuesProps) => {
+  const [selectedIssue, setSelectedIssue] = useState<string | null>(null);
+
   const { data: emergingIssues, isLoading } = useQuery({
     queryKey: ['emerging-issues', selectedProduct],
     queryFn: async () => {
@@ -52,6 +57,28 @@ export const EmergingIssues = ({ selectedProduct }: EmergingIssuesProps) => {
     },
   });
 
+  const { data: issueMentions, isLoading: isMentionsLoading } = useQuery({
+    queryKey: ['issue-mentions', selectedProduct, selectedIssue],
+    queryFn: async () => {
+      if (!selectedIssue) return [];
+
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+
+      const { data, error } = await supabase
+        .from('feedback_entries')
+        .select('*')
+        .eq('product', selectedProduct)
+        .eq('topic', selectedIssue)
+        .gte('timestamp', weekAgo.toISOString())
+        .order('timestamp', { ascending: false });
+
+      if (error) throw error;
+      return data as FeedbackEntry[];
+    },
+    enabled: !!selectedIssue,
+  });
+
   if (isLoading) {
     return (
       <Card className="shadow-sm">
@@ -85,7 +112,8 @@ export const EmergingIssues = ({ selectedProduct }: EmergingIssuesProps) => {
             {emergingIssues.map((issue) => (
               <div
                 key={issue.topic}
-                className="flex items-start gap-4 p-4 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors"
+                onClick={() => setSelectedIssue(issue.topic)}
+                className="flex items-start gap-4 p-4 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/10">
                   <AlertTriangle className="h-5 w-5 text-warning" />
@@ -119,6 +147,77 @@ export const EmergingIssues = ({ selectedProduct }: EmergingIssuesProps) => {
           </p>
         )}
       </CardContent>
+
+      <Dialog open={!!selectedIssue} onOpenChange={() => setSelectedIssue(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Feedback Mentions: {selectedIssue}</DialogTitle>
+          </DialogHeader>
+          {isMentionsLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-32 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4 mt-4">
+              {issueMentions && issueMentions.length > 0 ? (
+                issueMentions.map((mention) => (
+                  <div
+                    key={mention.id}
+                    className="p-4 rounded-lg border border-border bg-card space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="outline">{mention.source}</Badge>
+                          <Badge
+                            variant="outline"
+                            className={
+                              mention.sentiment === "positive"
+                                ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                : mention.sentiment === "negative"
+                                ? "bg-destructive/10 text-destructive border-destructive/20"
+                                : "bg-muted text-muted-foreground"
+                            }
+                          >
+                            {mention.sentiment}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(mention.timestamp).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <h4 className="font-medium mb-1">{mention.title}</h4>
+                        {mention.content && (
+                          <p className="text-sm text-muted-foreground line-clamp-3">
+                            {mention.content}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-2">
+                          by {mention.author} • Score: {mention.score}
+                        </p>
+                      </div>
+                      <a
+                        href={mention.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        View <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No mentions found for this topic.
+                </p>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
