@@ -90,6 +90,7 @@ serve(async (req) => {
 
     let newPosts = 0;
     let errors = 0;
+    const ingestionStartTime = new Date().toISOString();
 
 // Process each post
 for (const post of posts) {
@@ -146,6 +147,22 @@ for (const post of posts) {
     errors++;
   }
 }
+
+    // Record ingestion metadata
+    const { error: metadataError } = await supabase
+      .from("ingestion_metadata")
+      .insert({
+        product: product,
+        last_ingestion_time: ingestionStartTime,
+        status: errors > 0 ? "partial_success" : "success",
+        new_posts: newPosts,
+        total_processed: posts.length,
+        errors: errors,
+      });
+
+    if (metadataError) {
+      console.error("Error recording ingestion metadata:", metadataError);
+    }
 
     return new Response(
       JSON.stringify({

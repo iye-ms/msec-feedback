@@ -71,6 +71,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ingestion_metadata: {
+        Row: {
+          created_at: string
+          errors: number | null
+          id: string
+          last_ingestion_time: string
+          new_posts: number | null
+          product: string
+          status: string
+          total_processed: number | null
+        }
+        Insert: {
+          created_at?: string
+          errors?: number | null
+          id?: string
+          last_ingestion_time?: string
+          new_posts?: number | null
+          product: string
+          status?: string
+          total_processed?: number | null
+        }
+        Update: {
+          created_at?: string
+          errors?: number | null
+          id?: string
+          last_ingestion_time?: string
+          new_posts?: number | null
+          product?: string
+          status?: string
+          total_processed?: number | null
+        }
+        Relationships: []
+      }
       weekly_reports: {
         Row: {
           created_at: string
