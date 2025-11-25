@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, MessageSquare, ThumbsUp, AlertTriangle } from "lucide-react";
+import { TrendingUp, MessageSquare, ThumbsUp, AlertTriangle, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Product } from "@/components/ProductSelector";
+import { formatDistanceToNow } from "date-fns";
 
 interface StatsCardsProps {
   selectedProduct: Product;
@@ -65,6 +66,19 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
           return negativeRatio > 0.3 && topicFeedback.length > 3;
         }).length;
 
+      // Fetch last ingestion time
+      const { data: ingestionData } = await supabase
+        .from('ingestion_metadata')
+        .select('last_ingestion_time')
+        .eq('product', selectedProduct)
+        .order('last_ingestion_time', { ascending: false })
+        .limit(1)
+        .single();
+
+      const lastIngestionTime = ingestionData?.last_ingestion_time 
+        ? formatDistanceToNow(new Date(ingestionData.last_ingestion_time), { addSuffix: true })
+        : 'Never';
+
       return [
         {
           title: "Total Feedback",
@@ -98,14 +112,22 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
           icon: AlertTriangle,
           color: "text-warning",
         },
+        {
+          title: "Last Data Ingestion",
+          value: lastIngestionTime,
+          change: "Auto-refresh at 6am ET",
+          trend: "neutral",
+          icon: Clock,
+          color: "text-primary",
+        },
       ];
     },
   });
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        {[1, 2, 3, 4, 5].map((i) => (
           <Card key={i} className="shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <Skeleton className="h-4 w-24" />
@@ -122,7 +144,7 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
       {stats?.map((stat) => {
         const Icon = stat.icon;
         return (
