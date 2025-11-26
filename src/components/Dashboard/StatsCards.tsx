@@ -115,7 +115,7 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
         {
           title: "Last Data Ingestion",
           value: lastIngestionTime,
-          change: "Auto-refresh at 6am ET",
+          change: "Auto-refresh at 6am ET daily",
           trend: "neutral",
           icon: Clock,
           color: "text-primary",
@@ -159,7 +159,7 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
                 <span className={stat.trend === "up" ? "text-success" : "text-muted-foreground"}>
                   {stat.change}
                 </span>{" "}
-                from last week
+                {stat.title !== "Last Data Ingestion" && "from last week"}
               </p>
             </CardContent>
           </Card>
