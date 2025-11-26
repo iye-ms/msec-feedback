@@ -164,6 +164,24 @@ for (const post of posts) {
       console.error("Error recording ingestion metadata:", metadataError);
     }
 
+    // Automatically generate weekly report after successful ingestion
+    console.log(`Triggering weekly report generation for ${product}...`);
+    try {
+      const { data: reportData, error: reportError } = await supabase.functions.invoke(
+        "generate-weekly-report",
+        { body: { product } }
+      );
+
+      if (reportError) {
+        console.error("Error generating weekly report:", reportError);
+      } else {
+        console.log(`Weekly report generated successfully for ${product}`);
+      }
+    } catch (reportGenError) {
+      console.error("Failed to trigger report generation:", reportGenError);
+      // Don't fail the ingestion if report generation fails
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
