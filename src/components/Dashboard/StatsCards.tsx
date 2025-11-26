@@ -66,18 +66,24 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
           return negativeRatio > 0.3 && topicFeedback.length > 3;
         }).length;
 
-      // Fetch last ingestion time
-      const { data: ingestionData } = await supabase
-        .from('ingestion_metadata')
-        .select('last_ingestion_time')
-        .eq('product', selectedProduct)
-        .order('last_ingestion_time', { ascending: false })
-        .limit(1)
-        .single();
-
-      const lastIngestionTime = ingestionData?.last_ingestion_time 
-        ? formatDistanceToNow(new Date(ingestionData.last_ingestion_time), { addSuffix: true })
-        : 'Never';
+      // Calculate next 6am ET ingestion
+      const now = new Date();
+      const etOffset = -5; // ET is UTC-5 (EST) or UTC-4 (EDT), using EST for simplicity
+      const nowET = new Date(now.getTime() + (etOffset * 60 * 60 * 1000));
+      
+      let nextIngestion = new Date(nowET);
+      nextIngestion.setHours(6, 0, 0, 0);
+      
+      // If it's already past 6am ET today, schedule for tomorrow
+      if (nowET.getHours() >= 6) {
+        nextIngestion.setDate(nextIngestion.getDate() + 1);
+      }
+      
+      const nextIngestionFormatted = nextIngestion.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+      });
 
       return [
         {
@@ -113,9 +119,9 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
           color: "text-warning",
         },
         {
-          title: "Last Data Ingestion",
-          value: lastIngestionTime,
-          change: "Auto-refresh at 6am ET",
+          title: `Auto-refresh at 6am ET ${nextIngestionFormatted}`,
+          value: "Scheduled",
+          change: "Daily automated ingestion",
           trend: "neutral",
           icon: Clock,
           color: "text-primary",
