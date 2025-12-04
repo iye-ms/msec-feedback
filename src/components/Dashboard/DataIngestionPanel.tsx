@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, RefreshCw } from "lucide-react";
+import { Download, FileText, RefreshCw, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ interface DataIngestionPanelProps {
 
 export const DataIngestionPanel = ({ selectedProduct }: DataIngestionPanelProps) => {
   const [isIngesting, setIsIngesting] = useState(false);
+  const [isIngestingMSQA, setIsIngestingMSQA] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const handleIngestReddit = async () => {
@@ -35,6 +36,30 @@ export const DataIngestionPanel = ({ selectedProduct }: DataIngestionPanelProps)
       toast.error(error.message || "Failed to ingest Reddit data. Check edge function logs.");
     } finally {
       setIsIngesting(false);
+    }
+  };
+
+  const handleIngestMSQA = async () => {
+    try {
+      setIsIngestingMSQA(true);
+      toast.info(`Fetching Microsoft Q&A posts for ${selectedProduct}...`);
+      
+      const { data, error } = await supabase.functions.invoke('ingest-msqa', {
+        body: { product: selectedProduct },
+      });
+      
+      if (error) {
+        console.error('MSQA Ingestion error:', error);
+        throw error;
+      }
+      
+      toast.success(`Success! ${data?.new_posts || 0} new Q&A posts added for ${selectedProduct.toUpperCase()}`);
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (error: any) {
+      console.error('Failed to ingest MSQA:', error);
+      toast.error(error.message || "Failed to ingest Microsoft Q&A data. Check edge function logs.");
+    } finally {
+      setIsIngestingMSQA(false);
     }
   };
 
@@ -82,10 +107,26 @@ export const DataIngestionPanel = ({ selectedProduct }: DataIngestionPanelProps)
             size="sm"
           >
             <Download className="h-3 w-3 mr-2" />
-            {isIngesting ? "Ingesting..." : `Ingest ${selectedProduct.toUpperCase()} Posts`}
+            {isIngesting ? "Ingesting..." : `Ingest Reddit Posts`}
           </Button>
           <p className="text-xs text-muted-foreground">
             Fetch r/{selectedProduct === "purview" ? "MicrosoftPurview" : selectedProduct} posts
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Button
+            onClick={handleIngestMSQA}
+            disabled={isIngestingMSQA}
+            className="w-full"
+            variant="secondary"
+            size="sm"
+          >
+            <MessageSquare className="h-3 w-3 mr-2" />
+            {isIngestingMSQA ? "Ingesting..." : `Ingest MS Q&A Posts`}
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Fetch Microsoft Q&A questions
           </p>
         </div>
 
