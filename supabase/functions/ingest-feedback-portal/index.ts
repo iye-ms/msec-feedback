@@ -122,7 +122,7 @@ function parseFeedbackFromMarkdown(markdown: string, forumId: string): FeedbackI
       if (!titleMatch) continue;
       let title = titleMatch[1].trim();
       // Clean the title - remove markdown artifacts and truncate
-      title = title.replace(/\\n/g, ' ').replace(/\s+/g, ' ').trim();
+      title = title.replace(/\\+n/g, ' ').replace(/\\+/g, '').replace(/\s+/g, ' ').trim();
       if (title.length > 150) title = title.substring(0, 150) + "...";
       
       // Extract date
