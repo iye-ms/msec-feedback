@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, RefreshCw, MessageSquare, Lightbulb } from "lucide-react";
+import { Download, FileText, RefreshCw, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -13,7 +13,6 @@ interface DataIngestionPanelProps {
 export const DataIngestionPanel = ({ selectedProduct }: DataIngestionPanelProps) => {
   const [isIngesting, setIsIngesting] = useState(false);
   const [isIngestingMSQA, setIsIngestingMSQA] = useState(false);
-  const [isIngestingFeedback, setIsIngestingFeedback] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const handleIngestReddit = async () => {
@@ -61,30 +60,6 @@ export const DataIngestionPanel = ({ selectedProduct }: DataIngestionPanelProps)
       toast.error(error.message || "Failed to ingest Microsoft Q&A data. Check edge function logs.");
     } finally {
       setIsIngestingMSQA(false);
-    }
-  };
-
-  const handleIngestFeedbackPortal = async () => {
-    try {
-      setIsIngestingFeedback(true);
-      toast.info(`Fetching Microsoft Feedback Portal posts for ${selectedProduct}...`);
-      
-      const { data, error } = await supabase.functions.invoke('ingest-feedback-portal', {
-        body: { product: selectedProduct, pages: 5 },
-      });
-      
-      if (error) {
-        console.error('Feedback Portal Ingestion error:', error);
-        throw error;
-      }
-      
-      toast.success(`Success! ${data?.new_posts || 0} new feedback items added for ${selectedProduct.toUpperCase()}`);
-      setTimeout(() => window.location.reload(), 1500);
-    } catch (error: any) {
-      console.error('Failed to ingest Feedback Portal:', error);
-      toast.error(error.message || "Failed to ingest Feedback Portal data. Check edge function logs.");
-    } finally {
-      setIsIngestingFeedback(false);
     }
   };
 
@@ -155,23 +130,7 @@ export const DataIngestionPanel = ({ selectedProduct }: DataIngestionPanelProps)
           </p>
         </div>
 
-        {selectedProduct === "intune" && (
-          <div className="flex flex-col gap-1.5">
-            <Button
-              onClick={handleIngestFeedbackPortal}
-              disabled={isIngestingFeedback}
-              className="w-full"
-              variant="secondary"
-              size="sm"
-            >
-              <Lightbulb className="h-3 w-3 mr-2" />
-              {isIngestingFeedback ? "Ingesting..." : `Ingest Feedback Portal`}
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              Fetch Microsoft Feedback Portal ideas
-            </p>
-          </div>
-        )}
+        {/* Note: Feedback Portal requires JavaScript rendering which edge functions can't do */}
 
         <div className="flex flex-col gap-1.5">
           <Button
