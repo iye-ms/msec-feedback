@@ -24,6 +24,7 @@ interface TopicSummary {
     content: string;
     url: string;
     timestamp: string;
+    source: string;
   }>;
 }
 
@@ -77,6 +78,7 @@ export const TopicsView = ({ selectedProduct }: TopicsViewProps) => {
             content: entry.content,
             url: entry.url,
             timestamp: entry.timestamp,
+            source: entry.source,
           });
         }
       });
@@ -254,7 +256,7 @@ export const TopicsView = ({ selectedProduct }: TopicsViewProps) => {
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
-                                View on Reddit <ExternalLink className="h-3 w-3" />
+                                View on {post.source === "TechCommunity" ? "MS Q&A" : post.source} <ExternalLink className="h-3 w-3" />
                               </a>
                             </div>
                           </div>
