@@ -117,17 +117,20 @@ function parseFeedbackFromMarkdown(markdown: string, forumId: string): FeedbackI
       const voteMatch = context.match(/__(\d+)/);
       const votes = voteMatch ? parseInt(voteMatch[1]) : 0;
       
-      // Extract title
-      const titleMatch = context.match(/\*\*([^*]{10,})\*\*/);
+      // Extract title - get only the bold text, clean it
+      const titleMatch = context.match(/\*\*([^*]{10,}?)\*\*/);
       if (!titleMatch) continue;
-      const title = titleMatch[1].trim();
+      let title = titleMatch[1].trim();
+      // Clean the title - remove markdown artifacts and truncate
+      title = title.replace(/\\n/g, ' ').replace(/\s+/g, ' ').trim();
+      if (title.length > 150) title = title.substring(0, 150) + "...";
       
       // Extract date
       const dateMatch = context.match(/(\d+)\s+(months?|years?|days?|weeks?|hours?)\s+ago/i);
       const createdAt = dateMatch ? parseRelativeDate(`${dateMatch[1]} ${dateMatch[2]} ago`) : new Date().toISOString();
       
-      // Extract author
-      const authorMatch = context.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s*\\\\n/);
+      // Extract author - look for name pattern after initials
+      const authorMatch = context.match(/([A-Z][a-z]+(?:[\s,]+[A-Z][a-z]+)*)\s*\\\\n\\\\n·/);
       const author = authorMatch ? authorMatch[1].trim() : "Anonymous";
       
       items.push({
@@ -144,7 +147,18 @@ function parseFeedbackFromMarkdown(markdown: string, forumId: string): FeedbackI
     }
   }
   
-  return items;
+  // Deduplicate by title to avoid near-duplicates
+  const uniqueItems: FeedbackItem[] = [];
+  const seenTitles = new Set<string>();
+  for (const item of items) {
+    const normalizedTitle = item.title.toLowerCase().trim();
+    if (!seenTitles.has(normalizedTitle)) {
+      seenTitles.add(normalizedTitle);
+      uniqueItems.push(item);
+    }
+  }
+  
+  return uniqueItems;
 }
 
 function parseRelativeDate(relativeStr: string): string {
@@ -241,7 +255,8 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { forumId, forumName } = PRODUCT_FORUMS[product];
-    const portalUrl = `https://feedbackportal.microsoft.com/feedback/forum/${forumId}`;
+    // Sort by newest to get recent posts first
+    const portalUrl = `https://feedbackportal.microsoft.com/feedback/forum/${forumId}?sort=newest`;
     
     console.log(`Scraping ${forumName} from ${portalUrl} using Firecrawl...`);
 
