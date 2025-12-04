@@ -256,7 +256,7 @@ export const TopicsView = ({ selectedProduct }: TopicsViewProps) => {
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
-                                View on {post.source === "TechCommunity" ? "MS Q&A" : post.source} <ExternalLink className="h-3 w-3" />
+                                View on {post.source === "TechCommunity" ? "MS Q&A" : post.source === "FeedbackPortal" ? "Feedback Portal" : post.source} <ExternalLink className="h-3 w-3" />
                               </a>
                             </div>
                           </div>

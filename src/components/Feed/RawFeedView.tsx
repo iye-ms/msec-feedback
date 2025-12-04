@@ -125,7 +125,8 @@ export const RawFeedView = ({ selectedProduct }: RawFeedViewProps) => {
                   <SelectItem value="all">All Sources</SelectItem>
                   <SelectItem value="Reddit">Reddit</SelectItem>
                   <SelectItem value="LinkedIn">LinkedIn</SelectItem>
-                  <SelectItem value="TechCommunity">TechCommunity</SelectItem>
+                  <SelectItem value="TechCommunity">MS Q&A</SelectItem>
+                  <SelectItem value="FeedbackPortal">Feedback Portal</SelectItem>
                 </SelectContent>
               </Select>
             </div>
