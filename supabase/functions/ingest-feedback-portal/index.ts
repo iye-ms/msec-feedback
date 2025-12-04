@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 // Product to Feedback Portal forum mapping
-// Only Intune has a dedicated forum on the Feedback Portal
 const PRODUCT_FORUMS: Record<string, { forumId: string; forumName: string }> = {
   intune: { forumId: "ef1d6d38-fd1b-ec11-b6e7-0022481f8472", forumName: "Microsoft Intune" },
 };
@@ -21,160 +20,136 @@ interface FeedbackItem {
   createdAt: string;
   votes: number;
   status: string;
-  tags: string[];
   comments: number;
 }
 
-// Parse the HTML to extract feedback items from Feedback Portal
-function parseFeedbackFromHTML(html: string): FeedbackItem[] {
+// Parse the scraped markdown content to extract feedback items
+function parseFeedbackFromMarkdown(markdown: string, forumId: string): FeedbackItem[] {
   const items: FeedbackItem[] = [];
   
-  // Match feedback links with their content
-  // The format is: Vote count, author initials, author name, date, title, content, status, tags, comments
-  const feedbackRegex = /\[__(\d+)\\[\s\S]*?Vote[\s\S]*?\\[\s\S]*?([A-Z]{2})[\s\S]*?\\[\s\S]*?([^\\]+)\\[\s\S]*?\\[\s\S]*?·[\s\S]*?\\[\s\S]*?(\d+\s+(?:months?|years?|days?|weeks?)\s+ago)[\s\S]*?\\[\s\S]*?\*\*([^*]+)\*\*[\s\S]*?\\[\s\S]*?([^\\]+)[\s\S]*?(Open|Planned|Under Review|Closed|Completed)[\s\S]*?__\s*(\d+)\s*comments[\s\S]*?\]\(([^)]+)\)/g;
-
-  let match;
-  let index = 0;
-
-  while ((match = feedbackRegex.exec(html)) !== null && index < 50) {
-    try {
-      const votes = parseInt(match[1], 10);
-      const authorInitials = match[2];
-      const authorName = match[3].trim();
-      const timeAgo = match[4].trim();
-      const title = match[5].trim();
-      const content = match[6].trim();
-      const status = match[7];
-      const comments = parseInt(match[8], 10);
-      const url = match[9];
-
-      // Extract the idea ID from URL
-      const idMatch = url.match(/idea\/([a-f0-9-]+)/);
-      if (!idMatch) continue;
-      const id = idMatch[1];
-
-      // Convert "X months ago" to approximate date
-      const createdAt = parseRelativeDate(timeAgo);
-
-      // Extract tags from content - look for category labels
-      const tags: string[] = [];
-      const tagPatterns = [
-        /Linux/i, /iOS/i, /macOS/i, /Windows/i, /Android/i,
-        /Enrollment/i, /Configuration/i, /Application/i, /Compliance/i,
-        /Security/i, /Device/i, /Tenant/i, /Policy/i
-      ];
-      for (const pattern of tagPatterns) {
-        if (pattern.test(content) || pattern.test(title)) {
-          tags.push(pattern.source.replace(/\\i$/, ""));
-        }
-      }
-
-      items.push({
-        id,
-        author: authorName || `User ${authorInitials}`,
-        title,
-        content,
-        url: url.startsWith("http") ? url : `https://feedbackportal.microsoft.com${url}`,
-        createdAt,
-        votes,
-        status,
-        tags,
-        comments,
-      });
-      
-      index++;
-    } catch (err) {
-      console.error("Error parsing feedback item:", err);
-    }
+  // The markdown format from Firecrawl looks like:
+  // [__213\\n\\nVote](url)
+  // [CS\\n\\nCarlos Gonzalez Silva\\n\\n·\\n\\n2 months ago\\n\\n**Title**](url)
+  // [Content...](url)
+  
+  // Find all feedback entries using regex
+  // Pattern: Vote count link followed by author/title link
+  const votePattern = /\[__(\d+)\\\\n\\\\n\\\\nVote\]\(https:\/\/feedbackportal\.microsoft\.com\/feedback\/idea\/([a-f0-9-]+)\)/g;
+  const detailPattern = /\[([A-Z]{1,2})\\\\n\\\\n([^\\]+)\\\\n\\\\n·\\\\n\\\\n(\d+\s+(?:months?|years?|days?|weeks?|hours?)\s+ago)\\\\n\\\\n\*\*([^*]+)\*\*\]\(https:\/\/feedbackportal\.microsoft\.com\/feedback\/idea\/([a-f0-9-]+)\)/g;
+  
+  // Alternative simpler approach: split by feedback idea URLs and parse each section
+  const sections = markdown.split(/\[__\d+/);
+  
+  for (const section of sections) {
+    if (!section.trim()) continue;
+    
+    // Extract vote count
+    const voteMatch = section.match(/^(\d+)/);
+    if (!voteMatch) continue;
+    const votes = parseInt(voteMatch[1]);
+    
+    // Extract idea ID from URL
+    const idMatch = section.match(/feedback\/idea\/([a-f0-9-]+)/);
+    if (!idMatch) continue;
+    const id = idMatch[1];
+    
+    // Extract author initials and name
+    const authorMatch = section.match(/\[([A-Z]{1,2})\\\\n\\\\n([A-Za-z\s]+)\\\\n/);
+    const author = authorMatch ? authorMatch[2].trim() : "Anonymous";
+    
+    // Extract date
+    const dateMatch = section.match(/(\d+)\s+(months?|years?|days?|weeks?|hours?)\s+ago/i);
+    const createdAt = dateMatch ? parseRelativeDate(`${dateMatch[1]} ${dateMatch[2]} ago`) : new Date().toISOString();
+    
+    // Extract title (bold text)
+    const titleMatch = section.match(/\*\*([^*]+)\*\*/);
+    if (!titleMatch) continue;
+    const title = titleMatch[1].trim();
+    
+    // Extract content - text after the title before next section
+    const contentMatch = section.match(/\*\*[^*]+\*\*\]\([^)]+\)\s*\n?\s*\[?([^\]]*)/);
+    let content = contentMatch ? contentMatch[1].replace(/\\n/g, ' ').trim() : title;
+    // Clean up content
+    content = content.replace(/\[.*?\]\([^)]+\)/g, '').trim();
+    if (content.length < 10) content = title;
+    
+    // Extract status
+    const statusMatch = section.match(/(Open|Planned|Under Review|Closed|Completed)/);
+    const status = statusMatch ? statusMatch[1] : "Open";
+    
+    // Extract comments count
+    const commentsMatch = section.match(/__\s*(\d+)\s*comments?/i);
+    const comments = commentsMatch ? parseInt(commentsMatch[1]) : 0;
+    
+    items.push({
+      id,
+      author,
+      title,
+      content: content.substring(0, 500),
+      url: `https://feedbackportal.microsoft.com/feedback/idea/${id}`,
+      createdAt,
+      votes,
+      status,
+      comments,
+    });
   }
-
-  // Alternative parsing - simpler regex for the markdown structure
+  
+  // If the above parsing didn't work, try a more lenient approach
   if (items.length === 0) {
     console.log("Primary parsing failed, trying alternative method...");
     
-    // Split by feedback entries (starts with vote count pattern)
-    const lines = html.split("\n");
-    let currentItem: Partial<FeedbackItem> | null = null;
+    // Look for any idea URLs and extract surrounding context
+    const ideaUrlPattern = /https:\/\/feedbackportal\.microsoft\.com\/feedback\/idea\/([a-f0-9-]+)/g;
+    const seenIds = new Set<string>();
+    let match;
     
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
+    while ((match = ideaUrlPattern.exec(markdown)) !== null) {
+      const id = match[1];
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
       
-      // Vote line
-      const voteMatch = line.match(/^__(\d+)$/);
-      if (voteMatch && lines[i+2]?.includes("Vote")) {
-        if (currentItem && currentItem.id) {
-          items.push(currentItem as FeedbackItem);
-        }
-        currentItem = {
-          votes: parseInt(voteMatch[1], 10),
-          tags: [],
-          comments: 0,
-        };
-        continue;
-      }
+      // Get context around this URL (500 chars before and after)
+      const start = Math.max(0, match.index - 500);
+      const end = Math.min(markdown.length, match.index + 500);
+      const context = markdown.substring(start, end);
       
-      // Author line (format: Name\n)
-      if (currentItem && !currentItem.author && line.match(/^[A-Za-z\s]+$/) && line.length > 2 && line.length < 50) {
-        // Check if this looks like an author name (not a status or tag)
-        if (!["Open", "Planned", "Closed", "Under Review", "Completed", "Vote", "Follow", "Share"].includes(line)) {
-          currentItem.author = line;
-          continue;
-        }
-      }
+      // Extract vote count
+      const voteMatch = context.match(/__(\d+)/);
+      const votes = voteMatch ? parseInt(voteMatch[1]) : 0;
       
-      // Date line
-      const dateMatch = line.match(/^(\d+)\s+(months?|years?|days?|weeks?)\s+ago$/);
-      if (dateMatch && currentItem) {
-        currentItem.createdAt = parseRelativeDate(line);
-        continue;
-      }
+      // Extract title
+      const titleMatch = context.match(/\*\*([^*]{10,})\*\*/);
+      if (!titleMatch) continue;
+      const title = titleMatch[1].trim();
       
-      // Title line (bold format)
-      const titleMatch = line.match(/^\*\*(.+)\*\*\s*$/);
-      if (titleMatch && currentItem) {
-        currentItem.title = titleMatch[1].trim();
-        continue;
-      }
+      // Extract date
+      const dateMatch = context.match(/(\d+)\s+(months?|years?|days?|weeks?|hours?)\s+ago/i);
+      const createdAt = dateMatch ? parseRelativeDate(`${dateMatch[1]} ${dateMatch[2]} ago`) : new Date().toISOString();
       
-      // URL line
-      const urlMatch = line.match(/\(https:\/\/feedbackportal\.microsoft\.com\/feedback\/idea\/([a-f0-9-]+)\)/);
-      if (urlMatch && currentItem) {
-        currentItem.id = urlMatch[1];
-        currentItem.url = `https://feedbackportal.microsoft.com/feedback/idea/${urlMatch[1]}`;
-      }
+      // Extract author
+      const authorMatch = context.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s*\\\\n/);
+      const author = authorMatch ? authorMatch[1].trim() : "Anonymous";
       
-      // Comments line
-      const commentsMatch = line.match(/__\s*(\d+)\s*comments/);
-      if (commentsMatch && currentItem) {
-        currentItem.comments = parseInt(commentsMatch[1], 10);
-      }
-      
-      // Status line
-      if (["Open", "Planned", "Under Review", "Closed", "Completed"].includes(line) && currentItem) {
-        currentItem.status = line;
-      }
-      
-      // Content - lines between title and status that aren't special
-      if (currentItem && currentItem.title && !currentItem.content) {
-        if (line.length > 20 && !line.startsWith("__") && !line.startsWith("[") && 
-            !["Open", "Planned", "Under Review", "Closed", "Completed"].includes(line)) {
-          currentItem.content = line;
-        }
-      }
-    }
-    
-    // Add last item
-    if (currentItem && currentItem.id) {
-      items.push(currentItem as FeedbackItem);
+      items.push({
+        id,
+        author,
+        title,
+        content: title,
+        url: `https://feedbackportal.microsoft.com/feedback/idea/${id}`,
+        createdAt,
+        votes,
+        status: "Open",
+        comments: 0,
+      });
     }
   }
-
+  
   return items;
 }
 
 function parseRelativeDate(relativeStr: string): string {
   const now = new Date();
-  const match = relativeStr.match(/(\d+)\s+(months?|years?|days?|weeks?)/);
+  const match = relativeStr.match(/(\d+)\s+(months?|years?|days?|weeks?|hours?)/i);
   
   if (match) {
     const value = parseInt(match[1], 10);
@@ -188,10 +163,43 @@ function parseRelativeDate(relativeStr: string): string {
       now.setDate(now.getDate() - (value * 7));
     } else if (unit.startsWith("day")) {
       now.setDate(now.getDate() - value);
+    } else if (unit.startsWith("hour")) {
+      now.setHours(now.getHours() - value);
     }
   }
   
   return now.toISOString();
+}
+
+// Firecrawl REST API call
+async function scrapeWithFirecrawl(url: string, apiKey: string): Promise<{ markdown: string } | null> {
+  const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      url: url,
+      formats: ["markdown"],
+      waitFor: 5000,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Firecrawl API error: ${response.status} - ${errorText}`);
+    return null;
+  }
+
+  const data = await response.json();
+  console.log("Firecrawl response status:", data.success);
+  
+  if (data.success && data.data) {
+    return { markdown: data.data.markdown || "" };
+  }
+  
+  return null;
 }
 
 serve(async (req) => {
@@ -201,7 +209,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { product = "intune", pages = 1 } = body;
+    const { product = "intune" } = body;
     
     if (!PRODUCT_FORUMS[product]) {
       return new Response(
@@ -216,68 +224,60 @@ serve(async (req) => {
       );
     }
     
+    const firecrawlApiKey = Deno.env.get("FIRECRAWL_API_KEY");
+    if (!firecrawlApiKey) {
+      return new Response(
+        JSON.stringify({ error: "FIRECRAWL_API_KEY not configured" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+    
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { forumId, forumName } = PRODUCT_FORUMS[product];
+    const portalUrl = `https://feedbackportal.microsoft.com/feedback/forum/${forumId}`;
+    
+    console.log(`Scraping ${forumName} from ${portalUrl} using Firecrawl...`);
+
+    // Use Firecrawl REST API to scrape the JavaScript-rendered page
+    const scrapeResult = await scrapeWithFirecrawl(portalUrl, firecrawlApiKey);
+    
+    if (!scrapeResult) {
+      return new Response(
+        JSON.stringify({ error: "Failed to scrape Feedback Portal via Firecrawl" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const markdownContent = scrapeResult.markdown || "";
+    console.log(`Firecrawl returned ${markdownContent.length} characters of markdown`);
+    
+    // Log a sample of the markdown for debugging
+    console.log("Markdown sample (first 1000 chars):", markdownContent.substring(0, 1000));
+    
+    // Parse the markdown content
+    const allItems = parseFeedbackFromMarkdown(markdownContent, forumId);
+    console.log(`Parsed ${allItems.length} feedback items`);
+
+    // Filter to recent items (past month)
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
     
-    let allItems: FeedbackItem[] = [];
-    const pagesToFetch = Math.min(pages, 10); // Limit to 10 pages
-
-    console.log(`Fetching ${pagesToFetch} pages from Microsoft Feedback Portal for ${forumName}...`);
-
-    for (let page = 1; page <= pagesToFetch; page++) {
-      try {
-        // The feedback portal uses a different pagination approach
-        const portalUrl = `https://feedbackportal.microsoft.com/feedback/forum/${forumId}`;
-        console.log(`Fetching page ${page}: ${portalUrl}`);
-        
-        const response = await fetch(portalUrl, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-          },
-        });
-
-        if (!response.ok) {
-          console.error(`Failed to fetch page ${page}: ${response.status}`);
-          break;
-        }
-
-        const html = await response.text();
-        const pageItems = parseFeedbackFromHTML(html);
-        console.log(`Page ${page}: Found ${pageItems.length} feedback items`);
-        
-        // Filter to only items from the past month
-        const recentItems = pageItems.filter(item => {
-          const itemDate = new Date(item.createdAt);
-          return itemDate >= oneMonthAgo;
-        });
-        
-        allItems = allItems.concat(recentItems);
-        
-        // If all items on page are older than a month, stop
-        if (recentItems.length === 0 && pageItems.length > 0) {
-          console.log(`All items on page ${page} are older than 1 month, stopping.`);
-          break;
-        }
-        
-        // Small delay between pages
-        if (page < pagesToFetch) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      } catch (pageError) {
-        console.error(`Error fetching page ${page}:`, pageError);
-        break;
-      }
-    }
-
-    console.log(`Total feedback items to process: ${allItems.length}`);
+    const recentItems = allItems.filter(item => {
+      const itemDate = new Date(item.createdAt);
+      return itemDate >= oneMonthAgo;
+    });
+    
+    console.log(`${recentItems.length} items from past month`);
 
     let newPosts = 0;
     let errors = 0;
@@ -285,9 +285,9 @@ serve(async (req) => {
     const ingestionStartTime = new Date().toISOString();
 
     // Process each feedback item
-    for (const item of allItems) {
+    for (const item of recentItems) {
       try {
-        // Check if item already exists by URL (feedback portal ID)
+        // Check if item already exists by URL
         const { data: existing } = await supabase
           .from("feedback_entries")
           .select("id")
@@ -309,15 +309,10 @@ serve(async (req) => {
           console.error("Classification error:", classificationError);
         }
 
-        // Map status to sentiment if classification failed
+        // Use votes to help determine sentiment
         let sentiment = classification?.sentiment ?? "neutral";
-        if (!classification?.sentiment) {
-          // Use status as a hint for sentiment
-          if (item.status === "Closed" || item.status === "Completed") {
-            sentiment = "positive";
-          } else if (item.votes > 50) {
-            sentiment = "negative"; // High-voted items are often pain points
-          }
+        if (!classification?.sentiment && item.votes > 50) {
+          sentiment = "negative"; // High-voted items are often pain points
         }
 
         // Insert into database
@@ -355,7 +350,7 @@ serve(async (req) => {
       last_ingestion_time: ingestionStartTime,
       status: errors > 0 ? "partial_success" : "success",
       new_posts: newPosts,
-      total_processed: allItems.length,
+      total_processed: recentItems.length,
       errors: errors,
     });
 
@@ -368,10 +363,11 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Processed ${allItems.length} feedback items: ${newPosts} new, ${skipped} skipped, ${errors} errors`,
+        message: `Processed ${recentItems.length} feedback items: ${newPosts} new, ${skipped} skipped, ${errors} errors`,
         new_posts: newPosts,
         skipped,
-        total_processed: allItems.length,
+        total_processed: recentItems.length,
+        total_scraped: allItems.length,
         source: "FeedbackPortal",
         forum: forumName,
       }),
