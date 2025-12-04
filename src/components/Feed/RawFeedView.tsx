@@ -80,10 +80,11 @@ export const RawFeedView = ({ selectedProduct }: RawFeedViewProps) => {
     negative: "bg-destructive/10 text-destructive border-destructive/20",
   };
 
-  const sourceColors = {
+  const sourceColors: Record<string, string> = {
     Reddit: "bg-chart-1/10 text-chart-1 border-chart-1/20",
     LinkedIn: "bg-chart-2/10 text-chart-2 border-chart-2/20",
     TechCommunity: "bg-chart-5/10 text-chart-5 border-chart-5/20",
+    FeedbackPortal: "bg-chart-3/10 text-chart-3 border-chart-3/20",
   };
 
   const formatDate = (dateString: string) => {
