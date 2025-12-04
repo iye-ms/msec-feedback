@@ -13,7 +13,7 @@ import { DataIngestionPanel } from "@/components/Dashboard/DataIngestionPanel";
 import { ProductSelector, type Product } from "@/components/ProductSelector";
 
 const Index = () => {
-  const [selectedProduct, setSelectedProduct] = useState<Product>("entra");
+  const [selectedProduct, setSelectedProduct] = useState<Product>("intune");
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
