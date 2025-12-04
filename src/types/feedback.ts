@@ -1,4 +1,4 @@
-export type FeedbackSource = "Reddit" | "LinkedIn" | "TechCommunity";
+export type FeedbackSource = "Reddit" | "LinkedIn" | "TechCommunity" | "FeedbackPortal";
 export type Sentiment = "positive" | "neutral" | "negative";
 export type FeedbackType = "bug" | "feature_request" | "praise" | "question";
 
