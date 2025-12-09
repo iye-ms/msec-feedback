@@ -116,6 +116,13 @@ const Index = () => {
           </TabsContent>
         </Tabs>
       </main>
+      
+      {/* Footer */}
+      <footer className="border-t border-border bg-muted/30 py-4 mt-8">
+        <p className="text-center text-sm text-muted-foreground">
+          Created by Iris Yuning Ye and Lovable
+        </p>
+      </footer>
     </div>
   );
 };
