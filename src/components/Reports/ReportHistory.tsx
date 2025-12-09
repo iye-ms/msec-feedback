@@ -1,20 +1,21 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, FileText, ChevronRight } from "lucide-react";
+import { Calendar, FileText, ChevronRight, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ReactMarkdown from "react-markdown";
 import type { Product } from "@/components/ProductSelector";
 
 interface ReportHistoryProps {
   selectedProduct: Product;
+  searchQuery?: string;
 }
 
-export const ReportHistory = ({ selectedProduct }: ReportHistoryProps) => {
+export const ReportHistory = ({ selectedProduct, searchQuery = "" }: ReportHistoryProps) => {
   const [selectedReport, setSelectedReport] = useState<any>(null);
 
   const { data: reports, isLoading } = useQuery({
@@ -30,6 +31,20 @@ export const ReportHistory = ({ selectedProduct }: ReportHistoryProps) => {
       return data;
     },
   });
+
+  // Filter reports based on search query
+  const filteredReports = useMemo(() => {
+    if (!reports || !searchQuery.trim()) return reports;
+    
+    const query = searchQuery.toLowerCase();
+    return reports.filter((report) => {
+      return (
+        report.summary?.toLowerCase().includes(query) ||
+        report.top_topics?.some((topic: string) => topic.toLowerCase().includes(query)) ||
+        report.emerging_issues?.some((issue: string) => issue.toLowerCase().includes(query))
+      );
+    });
+  }, [reports, searchQuery]);
 
   if (isLoading) {
     return (
@@ -62,10 +77,26 @@ export const ReportHistory = ({ selectedProduct }: ReportHistoryProps) => {
     );
   }
 
+  if (filteredReports && filteredReports.length === 0 && searchQuery.trim()) {
+    return (
+      <Card className="shadow-sm">
+        <CardContent className="py-12 text-center space-y-4">
+          <Search className="h-12 w-12 mx-auto text-muted-foreground" />
+          <div>
+            <h3 className="text-lg font-semibold mb-2">No matches found</h3>
+            <p className="text-muted-foreground">
+              No reports contain "{searchQuery}". Try a different keyword.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <>
       <div className="space-y-4">
-        {reports.map((report) => (
+        {filteredReports?.map((report) => (
           <Card key={report.id} className="shadow-sm hover:shadow-md transition-shadow">
             <CardHeader>
               <div className="flex items-start justify-between">
