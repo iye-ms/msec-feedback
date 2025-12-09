@@ -2,13 +2,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Download, Calendar, TrendingUp, History } from "lucide-react";
+import { FileText, Download, Calendar, TrendingUp, History, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { ReportHistory } from "./ReportHistory";
+import { Input } from "@/components/ui/input";
+import { useState, useMemo } from "react";
 import type { Product } from "@/components/ProductSelector";
 
 interface ReportsViewProps {
@@ -16,6 +18,7 @@ interface ReportsViewProps {
 }
 
 export const ReportsView = ({ selectedProduct }: ReportsViewProps) => {
+  const [searchQuery, setSearchQuery] = useState("");
   const { data: report, isLoading } = useQuery({
     queryKey: ['weekly-report', selectedProduct],
     queryFn: async () => {
@@ -164,20 +167,64 @@ export const ReportsView = ({ selectedProduct }: ReportsViewProps) => {
     );
   }
 
+  // Filter function for report content
+  const matchesSearch = (text: string | undefined | null) => {
+    if (!searchQuery.trim()) return true;
+    if (!text) return false;
+    return text.toLowerCase().includes(searchQuery.toLowerCase());
+  };
+
+  // Check if current report matches search
+  const reportMatchesSearch = useMemo(() => {
+    if (!searchQuery.trim() || !report) return true;
+    return (
+      matchesSearch(report.summary) ||
+      report.top_topics?.some((topic: string) => matchesSearch(topic)) ||
+      report.emerging_issues?.some((issue: string) => matchesSearch(issue))
+    );
+  }, [searchQuery, report]);
+
   return (
     <Tabs defaultValue="latest" className="space-y-6">
-      <TabsList className="bg-card border border-border shadow-sm">
-        <TabsTrigger value="latest" className="gap-2">
-          <FileText className="h-4 w-4" />
-          Latest Report
-        </TabsTrigger>
-        <TabsTrigger value="history" className="gap-2">
-          <History className="h-4 w-4" />
-          All Reports
-        </TabsTrigger>
-      </TabsList>
+      <div className="flex items-center justify-between gap-4">
+        <TabsList className="bg-card border border-border shadow-sm">
+          <TabsTrigger value="latest" className="gap-2">
+            <FileText className="h-4 w-4" />
+            Latest Report
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-2">
+            <History className="h-4 w-4" />
+            All Reports
+          </TabsTrigger>
+        </TabsList>
+        
+        <div className="relative w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search reports by keyword..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
 
       <TabsContent value="latest" className="space-y-6">
+        {!reportMatchesSearch && (
+          <Card className="shadow-sm">
+            <CardContent className="py-12 text-center space-y-4">
+              <Search className="h-12 w-12 mx-auto text-muted-foreground" />
+              <div>
+                <h3 className="text-lg font-semibold mb-2">No matches found</h3>
+                <p className="text-muted-foreground">
+                  The latest report doesn't contain "{searchQuery}". Try a different keyword.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {reportMatchesSearch && (
+          <>
       {/* Report Header */}
       <Card className="shadow-sm">
         <CardHeader>
@@ -336,10 +383,12 @@ export const ReportsView = ({ selectedProduct }: ReportsViewProps) => {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
       </TabsContent>
 
       <TabsContent value="history">
-        <ReportHistory selectedProduct={selectedProduct} />
+        <ReportHistory selectedProduct={selectedProduct} searchQuery={searchQuery} />
       </TabsContent>
     </Tabs>
   );
