@@ -8,16 +8,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ReactMarkdown from "react-markdown";
+import type { Product } from "@/components/ProductSelector";
 
-export const ReportHistory = () => {
+interface ReportHistoryProps {
+  selectedProduct: Product;
+}
+
+export const ReportHistory = ({ selectedProduct }: ReportHistoryProps) => {
   const [selectedReport, setSelectedReport] = useState<any>(null);
 
   const { data: reports, isLoading } = useQuery({
-    queryKey: ['report-history'],
+    queryKey: ['report-history', selectedProduct],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('weekly_reports')
         .select('*')
+        .eq('product', selectedProduct)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

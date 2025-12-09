@@ -339,7 +339,7 @@ export const ReportsView = ({ selectedProduct }: ReportsViewProps) => {
       </TabsContent>
 
       <TabsContent value="history">
-        <ReportHistory />
+        <ReportHistory selectedProduct={selectedProduct} />
       </TabsContent>
     </Tabs>
   );
