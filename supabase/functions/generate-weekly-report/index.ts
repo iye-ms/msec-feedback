@@ -171,15 +171,18 @@ IMPORTANT: Include the reporting period dates (${new Date(weekStart).toLocaleDat
     const summary = aiData.choices[0]?.message?.content || "Summary generation failed";
 
     // Identify emerging issues (topics with high negative sentiment)
+    // Using same logic as dashboard: negativeRatio > 0.3 AND total > 3, sorted by negative %
     const emergingIssues = Object.entries(topicCounts)
-      .filter(([topic]) => {
+      .map(([topic, count]) => {
         const topicFeedback = feedbackData.filter((f) => f.topic === topic);
-        const negativeRatio =
-          topicFeedback.filter((f) => f.sentiment === "negative").length / topicFeedback.length;
-        return negativeRatio > 0.3 && topicFeedback.length > 5;
+        const negativeCount = topicFeedback.filter((f) => f.sentiment === "negative").length;
+        const negativeRatio = negativeCount / topicFeedback.length;
+        return { topic, count: count as number, negativeRatio, negativePercent: Math.round(negativeRatio * 100) };
       })
+      .filter((item) => item.negativeRatio > 0.3 && item.count > 3)
+      .sort((a, b) => b.negativePercent - a.negativePercent)
       .slice(0, 3)
-      .map(([topic, count]) => `${topic} (${count} mentions, high negative sentiment)`);
+      .map((item) => `${item.topic} (${item.count} mentions, ${item.negativePercent}% negative)`);
 
     // Save report to database with product
     const { data: reportData, error: upsertError } = await supabase
