@@ -125,6 +125,23 @@ export const ReportsView = ({ selectedProduct }: ReportsViewProps) => {
     }
   };
 
+  // Filter function for report content
+  const matchesSearch = (text: string | undefined | null) => {
+    if (!searchQuery.trim()) return true;
+    if (!text) return false;
+    return text.toLowerCase().includes(searchQuery.toLowerCase());
+  };
+
+  // Check if current report matches search - must be called before any early returns
+  const reportMatchesSearch = useMemo(() => {
+    if (!searchQuery.trim() || !report) return true;
+    return (
+      matchesSearch(report.summary) ||
+      report.top_topics?.some((topic: string) => matchesSearch(topic)) ||
+      report.emerging_issues?.some((issue: string) => matchesSearch(issue))
+    );
+  }, [searchQuery, report]);
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -166,23 +183,6 @@ export const ReportsView = ({ selectedProduct }: ReportsViewProps) => {
       </Card>
     );
   }
-
-  // Filter function for report content
-  const matchesSearch = (text: string | undefined | null) => {
-    if (!searchQuery.trim()) return true;
-    if (!text) return false;
-    return text.toLowerCase().includes(searchQuery.toLowerCase());
-  };
-
-  // Check if current report matches search
-  const reportMatchesSearch = useMemo(() => {
-    if (!searchQuery.trim() || !report) return true;
-    return (
-      matchesSearch(report.summary) ||
-      report.top_topics?.some((topic: string) => matchesSearch(topic)) ||
-      report.emerging_issues?.some((issue: string) => matchesSearch(issue))
-    );
-  }, [searchQuery, report]);
 
   return (
     <Tabs defaultValue="latest" className="space-y-6">
