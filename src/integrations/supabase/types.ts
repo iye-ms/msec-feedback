@@ -107,6 +107,36 @@ export type Database = {
         }
         Relationships: []
       }
+      issue_lifecycle: {
+        Row: {
+          became_emerging_at: string
+          created_at: string
+          id: string
+          is_active: boolean
+          product: string
+          resolved_at: string | null
+          topic: string
+        }
+        Insert: {
+          became_emerging_at?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          product: string
+          resolved_at?: string | null
+          topic: string
+        }
+        Update: {
+          became_emerging_at?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          product?: string
+          resolved_at?: string | null
+          topic?: string
+        }
+        Relationships: []
+      }
       weekly_reports: {
         Row: {
           created_at: string
