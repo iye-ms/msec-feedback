@@ -1,10 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, MessageSquare, AlertTriangle, Clock } from "lucide-react";
+import { TrendingUp, MessageSquare, AlertTriangle, Clock, Timer } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Product } from "@/components/ProductSelector";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, differenceInDays } from "date-fns";
 
 interface StatsCardsProps {
   selectedProduct: Product;
@@ -66,11 +66,39 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
         .eq('product', selectedProduct)
         .order('last_ingestion_time', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       const lastIngestionTime = ingestionData?.last_ingestion_time 
         ? formatDistanceToNow(new Date(ingestionData.last_ingestion_time), { addSuffix: true })
         : 'Never';
+
+      // Calculate average issue lifespan from resolved issues
+      const { data: resolvedIssues } = await supabase
+        .from('issue_lifecycle')
+        .select('became_emerging_at, resolved_at')
+        .eq('product', selectedProduct)
+        .eq('is_active', false)
+        .not('resolved_at', 'is', null);
+
+      let avgLifespan = 'No data';
+      if (resolvedIssues && resolvedIssues.length > 0) {
+        const totalDays = resolvedIssues.reduce((sum, issue) => {
+          const days = differenceInDays(
+            new Date(issue.resolved_at!),
+            new Date(issue.became_emerging_at)
+          );
+          return sum + Math.max(days, 1); // At least 1 day
+        }, 0);
+        const avg = Math.round(totalDays / resolvedIssues.length);
+        avgLifespan = `${avg} day${avg !== 1 ? 's' : ''}`;
+      }
+
+      // Get count of active issues for context
+      const { count: activeCount } = await supabase
+        .from('issue_lifecycle')
+        .select('*', { count: 'exact', head: true })
+        .eq('product', selectedProduct)
+        .eq('is_active', true);
 
       return [
         {
@@ -98,11 +126,11 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
           color: "text-warning",
         },
         {
-          title: "Last Data Ingestion",
-          value: lastIngestionTime,
-          change: "Auto-refresh at 6am ET daily",
+          title: "Avg Issue Lifespan",
+          value: avgLifespan,
+          change: `${activeCount || 0} active, ${resolvedIssues?.length || 0} resolved`,
           trend: "neutral",
-          icon: Clock,
+          icon: Timer,
           color: "text-primary",
         },
       ];
@@ -141,10 +169,7 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                <span className={stat.trend === "up" ? "text-success" : "text-muted-foreground"}>
-                  {stat.change}
-                </span>{" "}
-                {stat.title !== "Last Data Ingestion" && "from last week"}
+                {stat.change}
               </p>
             </CardContent>
           </Card>

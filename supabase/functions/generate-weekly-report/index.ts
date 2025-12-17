@@ -172,7 +172,7 @@ IMPORTANT: Include the reporting period dates (${new Date(weekStart).toLocaleDat
 
     // Identify emerging issues (topics with high negative sentiment)
     // Using same logic as dashboard: negativeRatio > 0.3 AND total > 3, sorted by negative %
-    const emergingIssues = Object.entries(topicCounts)
+    const currentEmergingTopics = Object.entries(topicCounts)
       .map(([topic, count]) => {
         const topicFeedback = feedbackData.filter((f) => f.topic === topic);
         const negativeCount = topicFeedback.filter((f) => f.sentiment === "negative").length;
@@ -180,9 +180,51 @@ IMPORTANT: Include the reporting period dates (${new Date(weekStart).toLocaleDat
         return { topic, count: count as number, negativeRatio, negativePercent: Math.round(negativeRatio * 100) };
       })
       .filter((item) => item.negativeRatio > 0.3 && item.count > 3)
-      .sort((a, b) => b.negativePercent - a.negativePercent)
+      .sort((a, b) => b.negativePercent - a.negativePercent);
+
+    const emergingIssues = currentEmergingTopics
       .slice(0, 3)
       .map((item) => `${item.topic} (${item.count} mentions, ${item.negativePercent}% negative)`);
+
+    // Track issue lifecycle - update existing and create new
+    console.log(`Tracking lifecycle for ${currentEmergingTopics.length} emerging topics`);
+    
+    // Get currently active issues for this product
+    const { data: activeIssues } = await supabase
+      .from("issue_lifecycle")
+      .select("*")
+      .eq("product", product)
+      .eq("is_active", true);
+
+    const currentTopicNames = currentEmergingTopics.map(t => t.topic);
+    const activeTopicNames = (activeIssues || []).map(i => i.topic);
+
+    // Mark resolved issues (were active, no longer emerging)
+    const resolvedTopics = (activeIssues || []).filter(i => !currentTopicNames.includes(i.topic));
+    for (const issue of resolvedTopics) {
+      console.log(`Marking issue resolved: ${issue.topic}`);
+      await supabase
+        .from("issue_lifecycle")
+        .update({ 
+          is_active: false, 
+          resolved_at: new Date().toISOString() 
+        })
+        .eq("id", issue.id);
+    }
+
+    // Create new issues (emerging now, weren't active before)
+    const newTopics = currentEmergingTopics.filter(t => !activeTopicNames.includes(t.topic));
+    for (const topic of newTopics) {
+      console.log(`Creating new emerging issue: ${topic.topic}`);
+      await supabase
+        .from("issue_lifecycle")
+        .insert({
+          product,
+          topic: topic.topic,
+          became_emerging_at: new Date().toISOString(),
+          is_active: true
+        });
+    }
 
     // Save report to database with product
     const { data: reportData, error: upsertError } = await supabase
