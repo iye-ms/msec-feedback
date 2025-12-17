@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, MessageSquare, ThumbsUp, AlertTriangle, Clock } from "lucide-react";
+import { TrendingUp, MessageSquare, AlertTriangle, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,13 +44,6 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
         ? (((totalCurrent - totalPrevious) / totalPrevious) * 100).toFixed(1)
         : '0';
 
-      const positiveCurrent = currentData?.filter(f => f.sentiment === 'positive').length || 0;
-      const positivePercent = totalCurrent > 0 ? Math.round((positiveCurrent / totalCurrent) * 100) : 0;
-      
-      const positivePrevious = previousData?.filter(f => f.sentiment === 'positive').length || 0;
-      const previousPositivePercent = totalPrevious > 0 ? Math.round((positivePrevious / totalPrevious) * 100) : 0;
-      const positiveChange = (positivePercent - previousPositivePercent).toFixed(1);
-
       const topicCounts = currentData?.reduce((acc, entry) => {
         acc[entry.topic] = (acc[entry.topic] || 0) + 1;
         return acc;
@@ -89,14 +82,6 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
           color: "text-primary",
         },
         {
-          title: "Positive Sentiment",
-          value: `${positivePercent}%`,
-          change: `${positiveChange > '0' ? '+' : ''}${positiveChange}%`,
-          trend: Number(positiveChange) >= 0 ? "up" : "down",
-          icon: ThumbsUp,
-          color: "text-success",
-        },
-        {
           title: "Trending Topics",
           value: trendingTopics.toString(),
           change: "Active",
@@ -126,8 +111,8 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        {[1, 2, 3, 4, 5].map((i) => (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
           <Card key={i} className="shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <Skeleton className="h-4 w-24" />
@@ -144,7 +129,7 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {stats?.map((stat) => {
         const Icon = stat.icon;
         return (
