@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Product } from "@/components/ProductSelector";
-import { formatDistanceToNow, differenceInDays } from "date-fns";
+import { formatDistanceToNow, differenceInDays, format } from "date-fns";
 
 interface StatsCardsProps {
   selectedProduct: Product;
@@ -71,6 +71,10 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
       const lastIngestionTime = ingestionData?.last_ingestion_time 
         ? formatDistanceToNow(new Date(ingestionData.last_ingestion_time), { addSuffix: true })
         : 'Never';
+      
+      const lastIngestionTimestamp = ingestionData?.last_ingestion_time
+        ? format(new Date(ingestionData.last_ingestion_time), "MMM d, h:mm a")
+        : '';
 
       // Calculate average issue lifespan from resolved issues
       const { data: resolvedIssues } = await supabase
@@ -136,7 +140,7 @@ export const StatsCards = ({ selectedProduct }: StatsCardsProps) => {
         {
           title: "Last Ingestion",
           value: lastIngestionTime,
-          change: "Data freshness",
+          change: lastIngestionTimestamp,
           trend: "neutral",
           icon: Clock,
           color: "text-primary",
