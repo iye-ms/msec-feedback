@@ -116,7 +116,7 @@ serve(async (req) => {
             role: "system",
             content: `You are an AI assistant that generates executive summaries of customer feedback for ${productName} product managers.
 Generate a comprehensive weekly report in markdown format that includes:
-- Overall sentiment trend for ${productName}
+- Overall sentiment trend for ${productName} - IMPORTANT: Only mention sentiment trends if positive feedback shows significant growth (e.g., notable increase week-over-week). Do NOT mention neutral or negative sentiment trends as they are expected to be predominant in every report.
 - Key highlights (positive feedback and praise)
 - Critical issues requiring immediate attention (with specific details)
 - Emerging patterns or spikes in mentions
