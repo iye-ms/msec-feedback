@@ -270,12 +270,12 @@ export const ReportsView = ({ selectedProduct }: ReportsViewProps) => {
         <Card className="shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Positive Sentiment
+              Neutral Sentiment
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-success">
-              {Math.round((report.sentiment_breakdown.positive / report.total_feedback) * 100)}%
+            <div className="text-3xl font-bold text-muted-foreground">
+              {Math.round((report.sentiment_breakdown.neutral / report.total_feedback) * 100)}%
             </div>
           </CardContent>
         </Card>
