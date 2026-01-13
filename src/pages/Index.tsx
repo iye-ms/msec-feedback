@@ -127,7 +127,7 @@ const Index = () => {
               </div>
               <div className="aspect-video w-full">
                 <iframe
-                  src="https://your-sprinklr-dashboard-url.com"
+                  src="https://space-microsoft.sprinklr.com/social/engagement/dashboard/5fd9736ee20e3d4618cee1fd"
                   className="w-full h-full min-h-[600px]"
                   title="Sprinklr Dashboard"
                   frameBorder="0"
