@@ -1,13 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, ChevronDown, ChevronUp, MessageSquare, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ExternalLink, ChevronDown, ChevronUp, MessageSquare, Loader2, Clock, TrendingUp, Hash, ThumbsDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { Product } from "@/components/ProductSelector";
+
+type SortOption = "time" | "activeness" | "topic" | "negative";
+
+const sortOptions: { value: SortOption; label: string; icon: React.ReactNode }[] = [
+  { value: "time", label: "Most Recent", icon: <Clock className="h-3 w-3" /> },
+  { value: "activeness", label: "Most Active", icon: <TrendingUp className="h-3 w-3" /> },
+  { value: "topic", label: "By Topic", icon: <Hash className="h-3 w-3" /> },
+  { value: "negative", label: "Most Negative", icon: <ThumbsDown className="h-3 w-3" /> },
+];
 
 interface FeedbackEntry {
   id: string;
@@ -165,6 +175,8 @@ const RedditPostItem = ({ post }: { post: FeedbackEntry }) => {
 };
 
 export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
+  const [sortBy, setSortBy] = useState<SortOption>("time");
+
   const { data: posts, isLoading } = useQuery({
     queryKey: ['reddit-preview', selectedProduct],
     queryFn: async () => {
@@ -174,12 +186,31 @@ export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
         .eq('product', selectedProduct)
         .eq('source', 'Reddit')
         .order('timestamp', { ascending: false })
-        .limit(10);
+        .limit(20); // Fetch more to allow sorting
 
       if (error) throw error;
       return data as FeedbackEntry[];
     },
   });
+
+  const sortedPosts = useMemo(() => {
+    if (!posts) return [];
+    
+    const sorted = [...posts];
+    switch (sortBy) {
+      case "time":
+        return sorted.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      case "activeness":
+        return sorted.sort((a, b) => b.score - a.score);
+      case "topic":
+        return sorted.sort((a, b) => (a.topic || "").localeCompare(b.topic || ""));
+      case "negative":
+        const sentimentOrder = { negative: 0, neutral: 1, positive: 2 };
+        return sorted.sort((a, b) => sentimentOrder[a.sentiment] - sentimentOrder[b.sentiment]);
+      default:
+        return sorted;
+    }
+  }, [posts, sortBy]);
 
   if (isLoading) {
     return (
@@ -222,14 +253,34 @@ export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
   return (
     <Card className="shadow-sm">
       <CardHeader>
-        <CardTitle>Recent Issues Reported in Social</CardTitle>
-        <CardDescription>
-          Latest {posts.length} discussions from r/{selectedProduct === "purview" ? "MicrosoftPurview" : selectedProduct}. Click to expand.
-        </CardDescription>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle>Recent Issues Reported in Social</CardTitle>
+            <CardDescription>
+              {sortedPosts.length} discussions from r/{selectedProduct === "purview" ? "MicrosoftPurview" : selectedProduct}. Click to expand.
+            </CardDescription>
+          </div>
+        </div>
+        
+        {/* Sort buttons */}
+        <div className="flex flex-wrap gap-2 mt-4">
+          {sortOptions.map((option) => (
+            <Button
+              key={option.value}
+              variant={sortBy === option.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSortBy(option.value)}
+              className="gap-1.5"
+            >
+              {option.icon}
+              {option.label}
+            </Button>
+          ))}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {posts.map((post) => (
+          {sortedPosts.map((post) => (
             <RedditPostItem key={post.id} post={post} />
           ))}
         </div>
