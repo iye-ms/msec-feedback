@@ -118,14 +118,14 @@ serve(async (req) => {
       );
     }
 
-    const aiResponse = await fetch("https://api.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-5-mini",
+        model: "google/gemini-2.5-flash",
         messages: [
           {
             role: "system",
@@ -145,7 +145,8 @@ Keep it brief and actionable.`
     });
 
     if (!aiResponse.ok) {
-      console.error("AI summarization failed:", await aiResponse.text());
+      const errorText = await aiResponse.text();
+      console.error("AI summarization failed:", aiResponse.status, errorText);
       return new Response(
         JSON.stringify({
           success: true,
