@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, Tags, TrendingUp, List, FileText, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Tags, TrendingUp, List, FileText, ShieldCheck, BarChart3 } from "lucide-react";
 import { SentimentChart } from "@/components/Dashboard/SentimentChart";
 import { TopicsChart } from "@/components/Dashboard/TopicsChart";
 import { StatsCards } from "@/components/Dashboard/StatsCards";
@@ -63,6 +63,10 @@ const Index = () => {
               <FileText className="h-4 w-4" />
               Reports
             </TabsTrigger>
+            <TabsTrigger value="sprinklr" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Sprinklr
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
@@ -113,6 +117,24 @@ const Index = () => {
 
           <TabsContent value="reports">
             <ReportsView selectedProduct={selectedProduct} />
+          </TabsContent>
+
+          <TabsContent value="sprinklr">
+            <div className="rounded-lg border border-border bg-card shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-border">
+                <h2 className="text-lg font-semibold">Sprinklr Dashboard</h2>
+                <p className="text-sm text-muted-foreground">Embedded analytics from Sprinklr</p>
+              </div>
+              <div className="aspect-video w-full">
+                <iframe
+                  src="https://your-sprinklr-dashboard-url.com"
+                  className="w-full h-full min-h-[600px]"
+                  title="Sprinklr Dashboard"
+                  frameBorder="0"
+                  allowFullScreen
+                />
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </main>
