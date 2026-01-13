@@ -126,23 +126,23 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="sprinklr" className="space-y-6">
-            <div className="rounded-lg border border-border bg-card shadow-sm overflow-hidden">
-              <div className="p-8 text-center">
-                <BarChart3 className="mx-auto h-16 w-16 text-primary mb-6" />
-                <h2 className="text-2xl font-semibold mb-2">Sprinklr Dashboard</h2>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Access social engagement analytics and insights. Requires Sprinklr SSO login.
-                </p>
-                <a
-                  href="https://space-microsoft.sprinklr.com/social/engagement/dashboard/5fd9736ee20e3d4618cee1fd"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
-                >
-                  Open Sprinklr Dashboard
-                  <ExternalLink className="h-4 w-4" />
-                </a>
+            <div className="rounded-lg border border-border bg-card shadow-sm p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-8 w-8 text-primary" />
+                <div>
+                  <h2 className="font-semibold">Sprinklr Dashboard</h2>
+                  <p className="text-sm text-muted-foreground">Social engagement analytics (SSO required)</p>
+                </div>
               </div>
+              <a
+                href="https://space-microsoft.sprinklr.com/social/engagement/dashboard/5fd9736ee20e3d4618cee1fd"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+              >
+                Open Dashboard
+                <ExternalLink className="h-4 w-4" />
+              </a>
             </div>
 
             <RedditPreview selectedProduct={selectedProduct} />
