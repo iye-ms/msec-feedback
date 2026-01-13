@@ -114,9 +114,6 @@ export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
                     </p>
                   )}
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className={sentimentColors[post.sentiment] || sentimentColors.neutral}>
-                      {post.sentiment || "neutral"}
-                    </Badge>
                     <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4/20">
                       {post.topic || "General"}
                     </Badge>
