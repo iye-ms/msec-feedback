@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
+import { ExternalLink, ChevronDown, ChevronUp, MessageSquare, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +28,10 @@ interface RedditPreviewProps {
 
 const RedditPostItem = ({ post }: { post: FeedbackEntry }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [commentSummary, setCommentSummary] = useState<string | null>(null);
+  const [commentCount, setCommentCount] = useState<number | null>(null);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   
   // Generate a brief summary (first 100 chars or first sentence)
   const getSummary = (content: string, title: string) => {
@@ -36,6 +40,35 @@ const RedditPostItem = ({ post }: { post: FeedbackEntry }) => {
     if (firstSentence.length < 150) return firstSentence + "...";
     return content.substring(0, 100) + "...";
   };
+
+  // Fetch comment summary when expanded
+  useEffect(() => {
+    if (isOpen && !commentSummary && !isLoadingSummary && !summaryError) {
+      const fetchSummary = async () => {
+        setIsLoadingSummary(true);
+        setSummaryError(null);
+        try {
+          const { data, error } = await supabase.functions.invoke("summarize-reddit-comments", {
+            body: { redditUrl: post.url },
+          });
+
+          if (error) {
+            throw error;
+          }
+
+          setCommentSummary(data.summary);
+          setCommentCount(data.commentCount);
+        } catch (err) {
+          console.error("Failed to fetch comment summary:", err);
+          setSummaryError("Unable to load discussion summary.");
+        } finally {
+          setIsLoadingSummary(false);
+        }
+      };
+
+      fetchSummary();
+    }
+  }, [isOpen, commentSummary, isLoadingSummary, summaryError, post.url]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -85,15 +118,32 @@ const RedditPostItem = ({ post }: { post: FeedbackEntry }) => {
               </p>
             </div>
             
-            {/* Comment Summary Placeholder */}
+            {/* Comment Summary */}
             <div className="bg-muted/30 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                <h4 className="text-sm font-medium text-foreground">Discussion Summary</h4>
+                <h4 className="text-sm font-medium text-foreground">
+                  Discussion Summary
+                  {commentCount !== null && commentCount > 0 && (
+                    <span className="font-normal text-muted-foreground ml-1">
+                      ({commentCount} comments)
+                    </span>
+                  )}
+                </h4>
               </div>
-              <p className="text-sm text-muted-foreground italic">
-                View the full discussion and comments on Reddit for community insights and responses.
-              </p>
+              
+              {isLoadingSummary ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Analyzing discussion...</span>
+                </div>
+              ) : summaryError ? (
+                <p className="text-sm text-muted-foreground italic">{summaryError}</p>
+              ) : commentSummary ? (
+                <p className="text-sm text-muted-foreground">{commentSummary}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">Loading...</p>
+              )}
             </div>
             
             {/* Link to Reddit */}
@@ -135,7 +185,7 @@ export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
     return (
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>Recent Reddit Posts</CardTitle>
+          <CardTitle>Recent Issues Reported in Social</CardTitle>
           <CardDescription>Latest discussions from r/{selectedProduct === "purview" ? "MicrosoftPurview" : selectedProduct}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -157,7 +207,7 @@ export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
     return (
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>Recent Reddit Posts</CardTitle>
+          <CardTitle>Recent Issues Reported in Social</CardTitle>
           <CardDescription>Latest discussions from r/{selectedProduct === "purview" ? "MicrosoftPurview" : selectedProduct}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -172,7 +222,7 @@ export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
   return (
     <Card className="shadow-sm">
       <CardHeader>
-        <CardTitle>Recent Reddit Posts</CardTitle>
+        <CardTitle>Recent Issues Reported in Social</CardTitle>
         <CardDescription>
           Latest {posts.length} discussions from r/{selectedProduct === "purview" ? "MicrosoftPurview" : selectedProduct}. Click to expand.
         </CardDescription>
