@@ -11,9 +11,14 @@ import { RawFeedView } from "@/components/Feed/RawFeedView";
 import { ReportsView } from "@/components/Reports/ReportsView";
 import { DataIngestionPanel } from "@/components/Dashboard/DataIngestionPanel";
 import { ProductSelector, type Product } from "@/components/ProductSelector";
+import { useAutoIngestion } from "@/hooks/useAutoIngestion";
 
 const Index = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product>("intune");
+  
+  // Auto-fetch new data when the page loads (with 30-minute cooldown)
+  useAutoIngestion(selectedProduct);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
