@@ -12,6 +12,7 @@ import { ReportsView } from "@/components/Reports/ReportsView";
 import { DataIngestionPanel } from "@/components/Dashboard/DataIngestionPanel";
 import { ProductSelector, type Product } from "@/components/ProductSelector";
 import { useAutoIngestion } from "@/hooks/useAutoIngestion";
+import { RedditPreview } from "@/components/Sprinklr/RedditPreview";
 
 const Index = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product>("intune");
@@ -124,7 +125,7 @@ const Index = () => {
             <ReportsView selectedProduct={selectedProduct} />
           </TabsContent>
 
-          <TabsContent value="sprinklr">
+          <TabsContent value="sprinklr" className="space-y-6">
             <div className="rounded-lg border border-border bg-card shadow-sm overflow-hidden">
               <div className="p-8 text-center">
                 <BarChart3 className="mx-auto h-16 w-16 text-primary mb-6" />
@@ -143,6 +144,8 @@ const Index = () => {
                 </a>
               </div>
             </div>
+
+            <RedditPreview selectedProduct={selectedProduct} />
           </TabsContent>
         </Tabs>
       </main>
