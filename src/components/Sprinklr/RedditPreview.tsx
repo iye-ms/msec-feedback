@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { Product } from "@/components/ProductSelector";
 
 interface FeedbackEntry {
@@ -20,15 +22,97 @@ interface FeedbackEntry {
   score: number;
 }
 
-const sentimentColors = {
-  positive: "bg-success/10 text-success border-success/20",
-  neutral: "bg-primary/10 text-primary border-primary/20",
-  negative: "bg-destructive/10 text-destructive border-destructive/20",
-};
-
 interface RedditPreviewProps {
   selectedProduct: Product;
 }
+
+const RedditPostItem = ({ post }: { post: FeedbackEntry }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  // Generate a brief summary (first 100 chars or first sentence)
+  const getSummary = (content: string, title: string) => {
+    if (!content || content === title) return title;
+    const firstSentence = content.split(/[.!?]/)[0];
+    if (firstSentence.length < 150) return firstSentence + "...";
+    return content.substring(0, 100) + "...";
+  };
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <div className="rounded-lg border border-border hover:border-primary/30 transition-colors overflow-hidden">
+        <CollapsibleTrigger asChild>
+          <button className="w-full p-4 text-left hover:bg-muted/50 transition-colors">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4/20">
+                    {post.topic || "General"}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {post.author} • {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    • ⬆ {post.score}
+                  </span>
+                </div>
+                <h3 className="font-medium text-foreground line-clamp-2 mb-1">
+                  {post.title}
+                </h3>
+                {!isOpen && (
+                  <p className="text-sm text-muted-foreground line-clamp-1">
+                    {getSummary(post.content, post.title)}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {isOpen ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            </div>
+          </button>
+        </CollapsibleTrigger>
+        
+        <CollapsibleContent>
+          <div className="px-4 pb-4 space-y-4 animate-accordion-down">
+            {/* Full Post Content */}
+            <div className="bg-muted/30 rounded-lg p-4">
+              <h4 className="text-sm font-medium mb-2 text-foreground">Post Content</h4>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {post.content || post.title}
+              </p>
+            </div>
+            
+            {/* Comment Summary Placeholder */}
+            <div className="bg-muted/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                <h4 className="text-sm font-medium text-foreground">Discussion Summary</h4>
+              </div>
+              <p className="text-sm text-muted-foreground italic">
+                View the full discussion and comments on Reddit for community insights and responses.
+              </p>
+            </div>
+            
+            {/* Link to Reddit */}
+            <a
+              href={post.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              View full post on Reddit
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+};
 
 export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
   const { data: posts, isLoading } = useQuery({
@@ -90,44 +174,13 @@ export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
       <CardHeader>
         <CardTitle>Recent Reddit Posts</CardTitle>
         <CardDescription>
-          Latest {posts.length} discussions from r/{selectedProduct === "purview" ? "MicrosoftPurview" : selectedProduct}
+          Latest {posts.length} discussions from r/{selectedProduct === "purview" ? "MicrosoftPurview" : selectedProduct}. Click to expand.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
           {posts.map((post) => (
-            <a
-              key={post.id}
-              href={post.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block p-4 rounded-lg border border-border hover:bg-muted/50 hover:border-primary/30 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-foreground line-clamp-2 mb-2">
-                    {post.title}
-                  </h3>
-                  {post.content && post.content !== post.title && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                      {post.content.substring(0, 150)}...
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4/20">
-                      {post.topic || "General"}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {post.author} • {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      • ⬆ {post.score}
-                    </span>
-                  </div>
-                </div>
-                <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              </div>
-            </a>
+            <RedditPostItem key={post.id} post={post} />
           ))}
         </div>
       </CardContent>
