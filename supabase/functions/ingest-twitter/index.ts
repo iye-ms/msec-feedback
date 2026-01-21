@@ -1,9 +1,136 @@
+import { createHmac } from "node:crypto";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const API_KEY = Deno.env.get("TWITTER_CONSUMER_KEY")?.trim();
+const API_SECRET = Deno.env.get("TWITTER_CONSUMER_SECRET")?.trim();
+const ACCESS_TOKEN = Deno.env.get("TWITTER_ACCESS_TOKEN")?.trim();
+const ACCESS_TOKEN_SECRET = Deno.env.get("TWITTER_ACCESS_TOKEN_SECRET")?.trim();
+
+function validateEnvironmentVariables() {
+  if (!API_KEY) throw new Error("Missing TWITTER_CONSUMER_KEY");
+  if (!API_SECRET) throw new Error("Missing TWITTER_CONSUMER_SECRET");
+  if (!ACCESS_TOKEN) throw new Error("Missing TWITTER_ACCESS_TOKEN");
+  if (!ACCESS_TOKEN_SECRET) throw new Error("Missing TWITTER_ACCESS_TOKEN_SECRET");
+}
+
+function generateOAuthSignature(
+  method: string,
+  url: string,
+  params: Record<string, string>,
+  consumerSecret: string,
+  tokenSecret: string
+): string {
+  const signatureBaseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(
+    Object.entries(params)
+      .sort()
+      .map(([k, v]) => `${k}=${v}`)
+      .join("&")
+  )}`;
+  const signingKey = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
+  const hmacSha1 = createHmac("sha1", signingKey);
+  return hmacSha1.update(signatureBaseString).digest("base64");
+}
+
+function generateOAuthHeader(method: string, url: string, queryParams: Record<string, string> = {}): string {
+  const oauthParams: Record<string, string> = {
+    oauth_consumer_key: API_KEY!,
+    oauth_nonce: Math.random().toString(36).substring(2),
+    oauth_signature_method: "HMAC-SHA1",
+    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
+    oauth_token: ACCESS_TOKEN!,
+    oauth_version: "1.0",
+  };
+
+  // Merge query params for signature (required for GET requests with params)
+  const allParams = { ...oauthParams, ...queryParams };
+
+  const signature = generateOAuthSignature(
+    method,
+    url,
+    allParams,
+    API_SECRET!,
+    ACCESS_TOKEN_SECRET!
+  );
+
+  const signedOAuthParams = {
+    ...oauthParams,
+    oauth_signature: signature,
+  };
+
+  return (
+    "OAuth " +
+    Object.entries(signedOAuthParams)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([k, v]) => `${encodeURIComponent(k)}="${encodeURIComponent(v)}"`)
+      .join(", ")
+  );
+}
+
+async function getUserIdByUsername(username: string): Promise<string | null> {
+  const baseUrl = "https://api.x.com/2/users/by/username";
+  const url = `${baseUrl}/${username}`;
+  const oauthHeader = generateOAuthHeader("GET", url);
+
+  console.log(`Fetching user ID for @${username}...`);
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: oauthHeader,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await response.json();
+  console.log("User lookup response:", JSON.stringify(data));
+
+  if (!response.ok || data.errors) {
+    console.error("Failed to get user ID:", data);
+    return null;
+  }
+
+  return data.data?.id || null;
+}
+
+async function getUserTweets(userId: string, maxResults: number = 10): Promise<any[]> {
+  const baseUrl = `https://api.x.com/2/users/${userId}/tweets`;
+  const queryParams: Record<string, string> = {
+    max_results: maxResults.toString(),
+    "tweet.fields": "created_at,public_metrics,text",
+  };
+
+  const queryString = Object.entries(queryParams)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join("&");
+
+  const fullUrl = `${baseUrl}?${queryString}`;
+  const oauthHeader = generateOAuthHeader("GET", baseUrl, queryParams);
+
+  console.log(`Fetching tweets for user ID ${userId}...`);
+
+  const response = await fetch(fullUrl, {
+    method: "GET",
+    headers: {
+      Authorization: oauthHeader,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await response.json();
+  console.log("Tweets response status:", response.status);
+
+  if (!response.ok || data.errors) {
+    console.error("Failed to get tweets:", data);
+    return [];
+  }
+
+  return data.data || [];
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,69 +138,43 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { product, account = "MicrosoftIntune" } = await req.json();
+    validateEnvironmentVariables();
 
-    const firecrawlApiKey = Deno.env.get('FIRECRAWL_API_KEY') || Deno.env.get('FIRECRAWL_API_KEY_1');
-    if (!firecrawlApiKey) {
-      console.error('FIRECRAWL_API_KEY not configured');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Firecrawl connector not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const { product, account = "MicrosoftIntune" } = await req.json();
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log(`Scraping tweets from @${account}...`);
+    console.log(`Fetching tweets from @${account} using Twitter API...`);
 
-    // Scrape the Twitter/X profile page
-    const twitterUrl = `https://x.com/${account}`;
-    
-    const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${firecrawlApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url: twitterUrl,
-        formats: ['markdown', 'links'],
-        waitFor: 3000, // Wait for dynamic content to load
-      }),
-    });
-
-    const scrapeData = await scrapeResponse.json();
-
-    if (!scrapeResponse.ok) {
-      console.error('Firecrawl API error:', scrapeData);
+    // Get user ID from username
+    const userId = await getUserIdByUsername(account);
+    if (!userId) {
       return new Response(
-        JSON.stringify({ success: false, error: scrapeData.error || 'Failed to scrape Twitter' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: `Could not find Twitter user @${account}` }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Scrape successful, parsing tweets...');
-
-    // Parse the markdown content to extract tweets
-    const markdown = scrapeData.data?.markdown || scrapeData.markdown || '';
-    const tweets = parseTweetsFromMarkdown(markdown, account);
-
-    console.log(`Found ${tweets.length} tweets to process`);
+    // Get recent tweets
+    const tweets = await getUserTweets(userId, 20);
+    console.log(`Found ${tweets.length} tweets from @${account}`);
 
     let newPosts = 0;
 
     for (const tweet of tweets) {
+      const tweetUrl = `https://x.com/${account}/status/${tweet.id}`;
+
       // Check if already exists
       const { data: existing } = await supabase
         .from('feedback_entries')
         .select('id')
-        .eq('url', tweet.url)
+        .eq('url', tweetUrl)
         .single();
 
       if (existing) {
-        console.log(`Tweet already exists: ${tweet.url}`);
+        console.log(`Tweet already exists: ${tweetUrl}`);
         continue;
       }
 
@@ -83,13 +184,17 @@ Deno.serve(async (req) => {
         .insert({
           source: 'Twitter',
           author: `@${account}`,
-          content: tweet.content,
-          url: tweet.url,
-          timestamp: tweet.timestamp || new Date().toISOString(),
+          title: tweet.text.substring(0, 100) + (tweet.text.length > 100 ? '...' : ''),
+          content: tweet.text,
+          url: tweetUrl,
+          timestamp: tweet.created_at || new Date().toISOString(),
           product: product || 'intune',
-          sentiment: 'neutral', // Default, can be classified later
+          sentiment: 'neutral',
           topic: 'General',
-          score: 0,
+          score: tweet.public_metrics?.like_count || 0,
+          engagement_score: (tweet.public_metrics?.like_count || 0) + 
+                           (tweet.public_metrics?.retweet_count || 0) + 
+                           (tweet.public_metrics?.reply_count || 0),
         });
 
       if (insertError) {
@@ -119,46 +224,3 @@ Deno.serve(async (req) => {
     );
   }
 });
-
-function parseTweetsFromMarkdown(markdown: string, account: string): { content: string; url: string; timestamp?: string }[] {
-  const tweets: { content: string; url: string; timestamp?: string }[] = [];
-  
-  // Split by common tweet separators and look for tweet-like content
-  const lines = markdown.split('\n');
-  let currentTweet = '';
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    
-    // Skip empty lines and navigation elements
-    if (!line || line.startsWith('[') && line.endsWith(']') && line.length < 30) {
-      if (currentTweet.length > 50) {
-        // Save the accumulated tweet
-        tweets.push({
-          content: currentTweet.trim(),
-          url: `https://x.com/${account}/status/${Date.now()}-${tweets.length}`, // Placeholder URL
-        });
-        currentTweet = '';
-      }
-      continue;
-    }
-    
-    // Accumulate tweet content
-    if (line.length > 20 && !line.startsWith('#') && !line.includes('Following') && !line.includes('Followers')) {
-      currentTweet += (currentTweet ? ' ' : '') + line;
-    }
-  }
-  
-  // Don't forget the last tweet
-  if (currentTweet.length > 50) {
-    tweets.push({
-      content: currentTweet.trim(),
-      url: `https://x.com/${account}/status/${Date.now()}-${tweets.length}`,
-    });
-  }
-  
-  // Limit to reasonable number and filter out noise
-  return tweets
-    .filter(t => t.content.length > 50 && t.content.length < 1000)
-    .slice(0, 20);
-}
