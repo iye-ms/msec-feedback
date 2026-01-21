@@ -53,6 +53,19 @@ serve(async (req) => {
           results[product] = { ...results[product], msqa: msqaData };
         }
 
+        // Call ingest-twitter for each product
+        const { data: twitterData, error: twitterError } = await supabase.functions.invoke(
+          "ingest-twitter",
+          { body: { product, account: "MicrosoftIntune" } }
+        );
+
+        if (twitterError) {
+          console.error(`Twitter ingestion error for ${product}:`, twitterError);
+          results[product] = { ...results[product], twitter: { error: twitterError.message } };
+        } else {
+          results[product] = { ...results[product], twitter: twitterData };
+        }
+
         // Small delay between products to avoid rate limiting
         await new Promise((resolve) => setTimeout(resolve, 2000));
       } catch (productError) {
