@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, RefreshCw, MessageSquare, Lightbulb } from "lucide-react";
+import { Download, FileText, RefreshCw, MessageSquare, Lightbulb, Twitter } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ export const DataIngestionPanel = ({ selectedProduct }: DataIngestionPanelProps)
   const [isIngesting, setIsIngesting] = useState(false);
   const [isIngestingMSQA, setIsIngestingMSQA] = useState(false);
   const [isIngestingFeedback, setIsIngestingFeedback] = useState(false);
+  const [isIngestingTwitter, setIsIngestingTwitter] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const handleIngestReddit = async () => {
@@ -88,6 +89,30 @@ export const DataIngestionPanel = ({ selectedProduct }: DataIngestionPanelProps)
     }
   };
 
+  const handleIngestTwitter = async () => {
+    try {
+      setIsIngestingTwitter(true);
+      toast.info(`Fetching tweets from @MicrosoftIntune...`);
+      
+      const { data, error } = await supabase.functions.invoke('ingest-twitter', {
+        body: { product: selectedProduct, account: 'MicrosoftIntune' },
+      });
+      
+      if (error) {
+        console.error('Twitter Ingestion error:', error);
+        throw error;
+      }
+      
+      toast.success(`Success! ${data?.new_posts || 0} new tweets added`);
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (error: any) {
+      console.error('Failed to ingest Twitter:', error);
+      toast.error(error.message || "Failed to ingest Twitter data. Check edge function logs.");
+    } finally {
+      setIsIngestingTwitter(false);
+    }
+  };
+
   const handleGenerateReport = async () => {
     try {
       setIsGeneratingReport(true);
@@ -152,6 +177,22 @@ export const DataIngestionPanel = ({ selectedProduct }: DataIngestionPanelProps)
           </Button>
           <p className="text-xs text-muted-foreground">
             Fetch Microsoft Q&A questions
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Button
+            onClick={handleIngestTwitter}
+            disabled={isIngestingTwitter}
+            className="w-full"
+            variant="secondary"
+            size="sm"
+          >
+            <Twitter className="h-3 w-3 mr-2" />
+            {isIngestingTwitter ? "Ingesting..." : `Ingest Twitter`}
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Fetch @MicrosoftIntune tweets via Firecrawl
           </p>
         </div>
 
