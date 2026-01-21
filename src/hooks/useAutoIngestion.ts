@@ -44,6 +44,15 @@ export const useAutoIngestion = (selectedProduct: Product, enabled: boolean = tr
           console.error("Auto-ingestion MSQA error:", msqaError);
         }
 
+        // Trigger Twitter ingestion silently
+        const { error: twitterError } = await supabase.functions.invoke("ingest-twitter", {
+          body: { product: selectedProduct, account: "MicrosoftIntune" },
+        });
+
+        if (twitterError) {
+          console.error("Auto-ingestion Twitter error:", twitterError);
+        }
+
         // Update last ingestion timestamp
         localStorage.setItem(storageKey, now.toString());
         console.log(`Auto-ingestion completed for ${selectedProduct}`);
