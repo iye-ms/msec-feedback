@@ -71,7 +71,7 @@ const Index = () => {
             </TabsTrigger>
             <TabsTrigger value="sprinklr" className="gap-2">
               <BarChart3 className="h-4 w-4" />
-              Sprinklr
+              Posts
             </TabsTrigger>
           </TabsList>
 
