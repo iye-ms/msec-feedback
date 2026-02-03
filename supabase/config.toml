@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.ingest-feedback-portal]
 verify_jwt = false
+
+[functions.ingest-sprinklr]
+verify_jwt = false
