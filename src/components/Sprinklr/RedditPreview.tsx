@@ -2,13 +2,14 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, ChevronDown, ChevronUp, MessageSquare, Loader2, Clock, TrendingUp, Hash, ThumbsDown, RefreshCw, Twitter } from "lucide-react";
+import { ExternalLink, ChevronDown, ChevronUp, MessageSquare, Loader2, Clock, TrendingUp, Hash, ThumbsDown, Twitter } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
+import { CsvUploadDialog } from "./CsvUploadDialog";
 import type { Product } from "@/components/ProductSelector";
 
 type SortOption = "time" | "activeness" | "topic" | "negative";
@@ -197,30 +198,10 @@ const SocialPostItem = ({ post }: { post: FeedbackEntry }) => {
 export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
   const [sortBy, setSortBy] = useState<SortOption>("time");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
-  const [isSyncingSprinklr, setIsSyncingSprinklr] = useState(false);
   const queryClient = useQueryClient();
 
-  const handleSyncSprinklr = async () => {
-    setIsSyncingSprinklr(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("ingest-sprinklr", {
-        body: { product: selectedProduct, days: 7 },
-      });
-
-      if (error) throw error;
-
-      if (data.success) {
-        toast.success(`Synced ${data.new_posts} new Twitter posts from Sprinklr`);
-        queryClient.invalidateQueries({ queryKey: ['social-posts', selectedProduct] });
-      } else {
-        throw new Error(data.error || "Unknown error");
-      }
-    } catch (err) {
-      console.error("Sprinklr sync error:", err);
-      toast.error("Failed to sync from Sprinklr. Check your API credentials.");
-    } finally {
-      setIsSyncingSprinklr(false);
-    }
+  const handleRefreshData = () => {
+    queryClient.invalidateQueries({ queryKey: ['social-posts', selectedProduct] });
   };
 
   const { data: posts, isLoading } = useQuery({
@@ -301,25 +282,15 @@ export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
               <CardTitle>Social Media Feed</CardTitle>
               <CardDescription>Twitter and Reddit discussions about {selectedProduct}</CardDescription>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSyncSprinklr}
-              disabled={isSyncingSprinklr}
-              className="gap-2"
-            >
-              {isSyncingSprinklr ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Twitter className="h-4 w-4" />
-              )}
-              Sync from Sprinklr
-            </Button>
+            <CsvUploadDialog 
+              selectedProduct={selectedProduct} 
+              onUploadComplete={handleRefreshData} 
+            />
           </div>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-center py-8">
-            No social posts found. Click "Sync from Sprinklr" to fetch Twitter data or "Ingest Reddit Posts" on the Dashboard.
+            No social posts found. Upload a CSV export from Sprinklr or "Ingest Reddit Posts" on the Dashboard.
           </p>
         </CardContent>
       </Card>
@@ -336,20 +307,10 @@ export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
               {filteredAndSortedPosts.length} posts from Twitter ({twitterCount}) and Reddit ({redditCount})
             </CardDescription>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSyncSprinklr}
-            disabled={isSyncingSprinklr}
-            className="gap-2"
-          >
-            {isSyncingSprinklr ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            Sync Sprinklr
-          </Button>
+          <CsvUploadDialog 
+            selectedProduct={selectedProduct} 
+            onUploadComplete={handleRefreshData} 
+          />
         </div>
         
         {/* Source filter */}

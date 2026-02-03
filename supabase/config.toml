@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.ingest-sprinklr]
 verify_jwt = false
+
+[functions.upload-sprinklr-csv]
+verify_jwt = false
