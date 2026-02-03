@@ -2,15 +2,17 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, ChevronDown, ChevronUp, MessageSquare, Loader2, Clock, TrendingUp, Hash, ThumbsDown } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { ExternalLink, ChevronDown, ChevronUp, MessageSquare, Loader2, Clock, TrendingUp, Hash, ThumbsDown, RefreshCw, Twitter } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { toast } from "sonner";
 import type { Product } from "@/components/ProductSelector";
 
 type SortOption = "time" | "activeness" | "topic" | "negative";
+type SourceFilter = "all" | "reddit" | "twitter";
 
 const sortOptions: { value: SortOption; label: string; icon: React.ReactNode }[] = [
   { value: "time", label: "Most Recent", icon: <Clock className="h-3 w-3" /> },
@@ -36,12 +38,15 @@ interface RedditPreviewProps {
   selectedProduct: Product;
 }
 
-const RedditPostItem = ({ post }: { post: FeedbackEntry }) => {
+const SocialPostItem = ({ post }: { post: FeedbackEntry }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [commentSummary, setCommentSummary] = useState<string | null>(null);
   const [commentCount, setCommentCount] = useState<number | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  
+  const isReddit = post.source === "Reddit";
+  const isTwitter = post.source === "Twitter";
   
   // Generate a brief summary (first 100 chars or first sentence)
   const getSummary = (content: string, title: string) => {
@@ -51,9 +56,9 @@ const RedditPostItem = ({ post }: { post: FeedbackEntry }) => {
     return content.substring(0, 100) + "...";
   };
 
-  // Fetch comment summary when expanded
+  // Fetch comment summary when expanded (only for Reddit)
   useEffect(() => {
-    if (isOpen && !commentSummary && !isLoadingSummary && !summaryError) {
+    if (isOpen && isReddit && !commentSummary && !isLoadingSummary && !summaryError) {
       const fetchSummary = async () => {
         setIsLoadingSummary(true);
         setSummaryError(null);
@@ -78,7 +83,7 @@ const RedditPostItem = ({ post }: { post: FeedbackEntry }) => {
 
       fetchSummary();
     }
-  }, [isOpen, commentSummary, isLoadingSummary, summaryError, post.url]);
+  }, [isOpen, isReddit, commentSummary, isLoadingSummary, summaryError, post.url]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -87,7 +92,20 @@ const RedditPostItem = ({ post }: { post: FeedbackEntry }) => {
           <button className="w-full p-4 text-left hover:bg-muted/50 transition-colors">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <Badge 
+                    variant="outline" 
+                    className={isTwitter 
+                      ? "bg-blue-500/10 text-blue-600 border-blue-500/20" 
+                      : "bg-orange-500/10 text-orange-600 border-orange-500/20"
+                    }
+                  >
+                    {isTwitter ? (
+                      <><Twitter className="h-3 w-3 mr-1" />Twitter</>
+                    ) : (
+                      "Reddit"
+                    )}
+                  </Badge>
                   <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4/20">
                     {post.topic || "General"}
                   </Badge>
@@ -95,7 +113,7 @@ const RedditPostItem = ({ post }: { post: FeedbackEntry }) => {
                     {post.author} • {formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    • ⬆ {post.score}
+                    • {isTwitter ? "❤️" : "⬆"} {post.score}
                   </span>
                 </div>
                 <h3 className="font-medium text-foreground line-clamp-2 mb-1">
@@ -128,35 +146,37 @@ const RedditPostItem = ({ post }: { post: FeedbackEntry }) => {
               </p>
             </div>
             
-            {/* Comment Summary */}
-            <div className="bg-muted/30 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                <h4 className="text-sm font-medium text-foreground">
-                  Discussion Summary
-                  {commentCount !== null && commentCount > 0 && (
-                    <span className="font-normal text-muted-foreground ml-1">
-                      ({commentCount} comments)
-                    </span>
-                  )}
-                </h4>
-              </div>
-              
-              {isLoadingSummary ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Analyzing discussion...</span>
+            {/* Comment Summary - only for Reddit */}
+            {isReddit && (
+              <div className="bg-muted/30 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  <h4 className="text-sm font-medium text-foreground">
+                    Discussion Summary
+                    {commentCount !== null && commentCount > 0 && (
+                      <span className="font-normal text-muted-foreground ml-1">
+                        ({commentCount} comments)
+                      </span>
+                    )}
+                  </h4>
                 </div>
-              ) : summaryError ? (
-                <p className="text-sm text-muted-foreground italic">{summaryError}</p>
-              ) : commentSummary ? (
-                <p className="text-sm text-muted-foreground">{commentSummary}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">Loading...</p>
-              )}
-            </div>
+                
+                {isLoadingSummary ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Analyzing discussion...</span>
+                  </div>
+                ) : summaryError ? (
+                  <p className="text-sm text-muted-foreground italic">{summaryError}</p>
+                ) : commentSummary ? (
+                  <p className="text-sm text-muted-foreground">{commentSummary}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">Loading...</p>
+                )}
+              </div>
+            )}
             
-            {/* Link to Reddit */}
+            {/* Link to source */}
             <a
               href={post.url}
               target="_blank"
@@ -164,7 +184,7 @@ const RedditPostItem = ({ post }: { post: FeedbackEntry }) => {
               className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
               onClick={(e) => e.stopPropagation()}
             >
-              View full post on Reddit
+              View full post on {post.source}
               <ExternalLink className="h-3 w-3" />
             </a>
           </div>
@@ -176,27 +196,62 @@ const RedditPostItem = ({ post }: { post: FeedbackEntry }) => {
 
 export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
   const [sortBy, setSortBy] = useState<SortOption>("time");
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [isSyncingSprinklr, setIsSyncingSprinklr] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleSyncSprinklr = async () => {
+    setIsSyncingSprinklr(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ingest-sprinklr", {
+        body: { product: selectedProduct, days: 7 },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success(`Synced ${data.new_posts} new Twitter posts from Sprinklr`);
+        queryClient.invalidateQueries({ queryKey: ['social-posts', selectedProduct] });
+      } else {
+        throw new Error(data.error || "Unknown error");
+      }
+    } catch (err) {
+      console.error("Sprinklr sync error:", err);
+      toast.error("Failed to sync from Sprinklr. Check your API credentials.");
+    } finally {
+      setIsSyncingSprinklr(false);
+    }
+  };
 
   const { data: posts, isLoading } = useQuery({
-    queryKey: ['reddit-preview', selectedProduct],
+    queryKey: ['social-posts', selectedProduct],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('feedback_entries')
         .select('*')
         .eq('product', selectedProduct)
-        .eq('source', 'Reddit')
+        .in('source', ['Reddit', 'Twitter'])
         .order('timestamp', { ascending: false })
-        .limit(20); // Fetch more to allow sorting
+        .limit(50);
 
       if (error) throw error;
       return data as FeedbackEntry[];
     },
   });
 
-  const sortedPosts = useMemo(() => {
+  const filteredAndSortedPosts = useMemo(() => {
     if (!posts) return [];
     
-    const sorted = [...posts];
+    // Filter by source
+    let filtered = posts;
+    if (sourceFilter === "reddit") {
+      filtered = posts.filter(p => p.source === "Reddit");
+    } else if (sourceFilter === "twitter") {
+      filtered = posts.filter(p => p.source === "Twitter");
+    }
+    
+    // Sort
+    const sorted = [...filtered];
     switch (sortBy) {
       case "time":
         return sorted.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
@@ -210,7 +265,10 @@ export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
       default:
         return sorted;
     }
-  }, [posts, sortBy]);
+  }, [posts, sortBy, sourceFilter]);
+
+  const redditCount = posts?.filter(p => p.source === "Reddit").length || 0;
+  const twitterCount = posts?.filter(p => p.source === "Twitter").length || 0;
 
   if (isLoading) {
     return (
@@ -238,12 +296,30 @@ export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
     return (
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>Recent Issues Reported in Social</CardTitle>
-          <CardDescription>Latest discussions from r/{selectedProduct === "purview" ? "MicrosoftPurview" : selectedProduct}</CardDescription>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle>Social Media Feed</CardTitle>
+              <CardDescription>Twitter and Reddit discussions about {selectedProduct}</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSyncSprinklr}
+              disabled={isSyncingSprinklr}
+              className="gap-2"
+            >
+              {isSyncingSprinklr ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Twitter className="h-4 w-4" />
+              )}
+              Sync from Sprinklr
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-center py-8">
-            No Reddit posts found. Click "Ingest Reddit Posts" on the Dashboard to fetch data.
+            No social posts found. Click "Sync from Sprinklr" to fetch Twitter data or "Ingest Reddit Posts" on the Dashboard.
           </p>
         </CardContent>
       </Card>
@@ -255,19 +331,60 @@ export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <CardTitle>Recent Issues Reported in Social</CardTitle>
+            <CardTitle>Social Media Feed</CardTitle>
             <CardDescription>
-              {sortedPosts.length} discussions from r/{selectedProduct === "purview" ? "MicrosoftPurview" : selectedProduct}. Click to expand.
+              {filteredAndSortedPosts.length} posts from Twitter ({twitterCount}) and Reddit ({redditCount})
             </CardDescription>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSyncSprinklr}
+            disabled={isSyncingSprinklr}
+            className="gap-2"
+          >
+            {isSyncingSprinklr ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Sync Sprinklr
+          </Button>
+        </div>
+        
+        {/* Source filter */}
+        <div className="flex flex-wrap gap-2 mt-4">
+          <Button
+            variant={sourceFilter === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSourceFilter("all")}
+          >
+            All ({posts.length})
+          </Button>
+          <Button
+            variant={sourceFilter === "twitter" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSourceFilter("twitter")}
+            className="gap-1.5"
+          >
+            <Twitter className="h-3 w-3" />
+            Twitter ({twitterCount})
+          </Button>
+          <Button
+            variant={sourceFilter === "reddit" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSourceFilter("reddit")}
+          >
+            Reddit ({redditCount})
+          </Button>
         </div>
         
         {/* Sort buttons */}
-        <div className="flex flex-wrap gap-2 mt-4">
+        <div className="flex flex-wrap gap-2 mt-2">
           {sortOptions.map((option) => (
             <Button
               key={option.value}
-              variant={sortBy === option.value ? "default" : "outline"}
+              variant={sortBy === option.value ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setSortBy(option.value)}
               className="gap-1.5"
@@ -280,8 +397,8 @@ export const RedditPreview = ({ selectedProduct }: RedditPreviewProps) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {sortedPosts.map((post) => (
-            <RedditPostItem key={post.id} post={post} />
+          {filteredAndSortedPosts.map((post) => (
+            <SocialPostItem key={post.id} post={post} />
           ))}
         </div>
       </CardContent>
